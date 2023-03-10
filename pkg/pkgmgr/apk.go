@@ -24,6 +24,7 @@ import (
 
 const (
 	alpineThree = "alpine:3"
+	apkLibrary = "/lib/apk/db"
 )
 
 type apkManager struct {
@@ -135,16 +136,19 @@ func (am *apkManager) InstallUpdates(ctx context.Context, manifest *types.Update
 	}
 	log.Debugf("latest unique APKs: %v", updates)
 
-	var toolImageName string
+	var updatedImageState *llb.State
 	if am.isWolfi {
-		toolImageName = alpineThree
+		updatedImageState, err = am.unpackAndMergeUpdates(ctx, updates, alpineThree)
+		if err != nil {
+			return nil, err
+		}
+	} else {
+		updatedImageState, err = am.upgradePackages(ctx, updates)
+		if err != nil {
+			return nil, err
+		}
 	}
 
-	var updatedImageState *llb.State
-	updatedImageState, err = am.upgradePackages(ctx, updates, toolImageName)
-	if err != nil {
-		return nil, err
-	}
 
 	// Validate that the deployed packages are of the requested version or better
 	resultManifestPath := filepath.Join(am.workingFolder, resultsPath, resultManifest)
@@ -162,18 +166,9 @@ func (am *apkManager) InstallUpdates(ctx context.Context, manifest *types.Update
 // TODO: support "distroless" Alpine images (e.g. APKO images)
 // Still assumes that APK exists in the target image and is pathed, which can be addressed by
 // mounting a copy of apk-tools-static into the image and invoking apk-static directly.
-func (am *apkManager) upgradePackages(ctx context.Context, updates types.UpdatePackages, toolImageName string) (*llb.State, error) {
-	var apkUpdated llb.State
-	if toolImageName != "" {
-		toolingBase := llb.Image(toolImageName,
-			llb.Platform(am.config.Platform),
-			llb.ResolveModeDefault,
-		)
-		apkUpdated = toolingBase.Run(llb.Shlex("apk update")).Root()
-	} else {
-		// TODO: Add support for custom APK config
-		apkUpdated = am.config.ImageState.Run(llb.Shlex("apk update")).Root()
-	}
+func (am *apkManager) upgradePackages(ctx context.Context, updates types.UpdatePackages) (*llb.State, error) {
+	// TODO: Add support for custom APK config
+	apkUpdated := am.config.ImageState.Run(llb.Shlex("apk update")).Root()
 
 	// Install all requested update packages without specifying the version. This works around:
 	//  - Reports being slightly out of date, where a newer security revision has displaced the one specified leading to not found errors.
@@ -203,4 +198,63 @@ func (am *apkManager) upgradePackages(ctx context.Context, updates types.UpdateP
 	patchDiff := llb.Diff(apkUpdated, apkInstalled)
 	patchMerge := llb.Merge([]llb.State{am.config.ImageState, patchDiff})
 	return &patchMerge, nil
+}
+
+func (am *apkManager) unpackAndMergeUpdates(ctx context.Context, updates types.UpdatePackages, toolImage string) (*llb.State, error) {
+	// Spin up a build tooling container to fetch and unpack packages to create patch layer.
+	// Pull family:version -> need to create version to base image map
+	toolingBase := llb.Image(toolImage,
+		llb.Platform(am.config.Platform),
+		llb.ResolveModeDefault,
+	)
+
+	updated := toolingBase.Run(llb.Shlex("apk update")).Root()
+
+	pacman := updated.Run(llb.Shlex("apk add --no-cache pacman")).Root()
+
+	const apkDownloadTemplate = "apk fetch %s"
+	pkgStrings := []string{}
+	for _, u := range updates {
+		pkgStrings = append(pkgStrings, u.Name)
+	}
+	downloadCmd := fmt.Sprintf(apkDownloadTemplate, strings.Join(pkgStrings, " "))
+	downloaded := pacman.Dir(downloadPath).Run(llb.Shlex(downloadCmd)).Root()
+
+	const extractTemplate = `find %s -name '*.apk' -exec sh -c "tar -zxvf '{}' -C %s" \;`
+	extractCmd := fmt.Sprintf(extractTemplate, downloadPath, unpackPath)
+	unpacked := downloaded.Run(llb.Shlex(extractCmd)).Root()
+	unpackedToRoot := llb.Scratch().File(llb.Copy(unpacked, unpackPath, "/", &llb.CopyInfo{CopyDirContentsOnly: true}))
+
+	mkFolders := downloaded.File(llb.Mkdir(resultsPath, 0o744, llb.WithParents(true))).File(llb.Mkdir(dpkgStatusFolder, 0o744, llb.WithParents(true)))
+	const writeFieldsTemplate = `find . -name '*.apk' -exec sh -c "pacman -Qp {} | tr ' ' '-' > %s" \;`
+	writeFieldsCmd := fmt.Sprintf(writeFieldsTemplate, filepath.Join(resultsPath, "{}.fields"))
+	fieldsWritten := mkFolders.Dir(downloadPath).Run(llb.Shlex(writeFieldsCmd)).Root()
+
+	const outputResultsTemplate = `find . -name '*.fields' -exec sh -c 'grep "" {} >> %s' \;`
+	outputResultsCmd := fmt.Sprintf(outputResultsTemplate, resultManifest)
+	resultsWritten := fieldsWritten.Dir(resultsPath).Run(llb.Shlex(outputResultsCmd)).Root()
+	resultsDiff := llb.Diff(fieldsWritten, resultsWritten)
+	if err := buildkit.SolveToLocal(ctx, am.config.Client, &resultsDiff, am.workingFolder); err != nil {
+		return nil, err
+	}
+
+	// const copyStatusTemplate = `find . -name '*.fields' -exec sh -c
+	// "awk -v statusDir=%s -v statusdNames=\"(%s)\"
+	// 	'BEGIN{split(statusdNames,names); for (n in names) b64names[names[n]]=\"\"} {a[\$1]=\$2}
+	// 	 END{cmd = \"printf \" a[\"Package:\"] \" | base64\" ;
+	// 	  cmd | getline b64name ;
+	// 	  close(cmd) ;
+	// 	  textname = a[\"Package:\"] ;
+	// 	  gsub(\"\\\\.[^.]*$\", \"\", textname);
+	// 	  outname = b64name in b64names ? b64name : textname;
+	// 	  outpath = statusDir \"/\" outname ;
+	// 	  printf \"cp \\\"%%s\\\" \\\"%%s\\\"\\\n\",FILENAME,outpath }'
+	// {} | sh" \;`
+	// copyStatusCmd := fmt.Sprintf(strings.ReplaceAll(copyStatusTemplate, "\n", ""), dpkgStatusFolder, "")
+	// statusUpdated := fieldsWritten.Dir(resultsPath).Run(llb.Shlex(copyStatusCmd)).Root()
+
+	// Diff unpacked packages layers from previous and merge with target
+	// statusDiff := llb.Diff(fieldsWritten, updated)
+	merged := llb.Merge([]llb.State{am.config.ImageState, unpackedToRoot})//, resultsDiff})
+	return &merged, nil
 }

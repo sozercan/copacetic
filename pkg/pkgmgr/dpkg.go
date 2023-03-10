@@ -176,6 +176,7 @@ func (dm *dpkgManager) probeDPKGStatus(ctx context.Context, toolImage string) er
 		dm.statusdNames = strings.ReplaceAll(string(statusdNames), "\n", " ")
 		log.Infof("Processed status.d: %s", dm.statusdNames)
 		dm.isDistroless = true
+		log.Debugf("*** dm.statusdNames", dm.statusdNames)
 		return nil
 	default:
 		err := fmt.Errorf("could not infer DPKG status of target image: %v", dpkgStatus)
