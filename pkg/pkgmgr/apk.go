@@ -23,8 +23,8 @@ import (
 )
 
 const (
-	alpineThree = "alpine:3"
-	apkLibrary = "/lib/apk/db"
+	alpineThree = "cgr.dev/chainguard/apko:latest"
+	apkLibrary  = "/lib/apk/db"
 )
 
 type apkManager struct {
@@ -149,7 +149,6 @@ func (am *apkManager) InstallUpdates(ctx context.Context, manifest *types.Update
 		}
 	}
 
-
 	// Validate that the deployed packages are of the requested version or better
 	resultManifestPath := filepath.Join(am.workingFolder, resultsPath, resultManifest)
 	if err := validateAPKPackageVersions(updates, apkComparer, resultManifestPath); err != nil {
@@ -261,6 +260,6 @@ func (am *apkManager) unpackAndMergeUpdates(ctx context.Context, updates types.U
 
 	// Diff unpacked packages layers from previous and merge with target
 	// statusDiff := llb.Diff(fieldsWritten, updated)
-	merged := llb.Merge([]llb.State{am.config.ImageState, unpackedToRoot})//, resultsDiff})
+	merged := llb.Merge([]llb.State{am.config.ImageState, unpackedToRoot}) //, resultsDiff})
 	return &merged, nil
 }
