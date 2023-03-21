@@ -7,17 +7,18 @@
 # Global: Variables                                                            #
 ################################################################################
 
+CLI_VERSION := v0.1.0
+
 # Formatted symbol markers (=>, [needs root]) for info output
 INFOMARK = $(shell printf "\033[34;1m=>\033[0m")
 ROOTMARK = $(shell printf "\033[31;1m[needs root]\033[0m")
 
 # Optional Make arguments
 CGO_ENABLED  ?= 0
-CLI_VERSION  ?= edge
 DEBUG        ?= 0
 NODE_VERSION ?= 16-bullseye-slim
 
-# Go build metadata variables 
+# Go build metadata variables
 BASE_PACKAGE_NAME := github.com/project-copacetic/copacetic
 GIT_COMMIT        := $(shell git rev-list -1 HEAD)
 GIT_VERSION       := $(shell git describe --always --tags --dirty)
@@ -67,7 +68,7 @@ $(CLI_BINARY):
 .PHONY: lint
 lint:
 	$(info $(INFOMARK) Linting go code ...)
-	golangci-lint run
+	golangci-lint run -v ./...
 
 ################################################################################
 # Target: format                                                               #
@@ -94,6 +95,13 @@ $(ARCHIVE_NAME):
 ################################################################################
 .PHONY: release
 release: build archive
+
+################################################################################
+# Target: release-manifest                                                     #
+################################################################################
+.PHONY: release-manifest
+release-manifest:
+	@sed -i -e 's/^CLI_VERSION := .*/CLI_VERSION := ${NEWVERSION}/' ./Makefile
 
 ################################################################################
 # Target: test - unit testing                                                  #

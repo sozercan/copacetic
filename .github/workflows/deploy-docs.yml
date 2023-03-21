@@ -5,11 +5,11 @@ on:
     branches:
       - main
     paths:
-      - '.github/workflows/deploy-docs.yaml'
+      - '.github/workflows/deploy-docs.yml'
       - 'website/**'
 
 jobs:
-  deploy: 
+  deploy:
     name: Deploy docs website to GitHub Pages
     runs-on: ubuntu-latest
     permissions:
