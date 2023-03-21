@@ -15,9 +15,10 @@ builds:
       - CGO_ENABLED=0
       - GO111MODULE=on
     ldflags: -s -w
-      -X github.com/project-copacetic/copacetic/pkg/version.version={{.Version}}
-      -X github.com/project-copacetic/copacetic/pkg/version.gitSHA={{.Commit}}
-      -X github.com/project-copacetic/copacetic/pkg/version.buildTime={{.Date}}
+      -X github.com/project-copacetic/copacetic/pkg/version.GitVersion={{.Version}}
+      -X github.com/project-copacetic/copacetic/pkg/version.GitCommit={{.Commit}}
+      -X github.com/project-copacetic/copacetic/pkg/version.BuildDate={{.Date}}
+      -X main.Version=$(.Version)
       -extldflags "-static"
     flags: -tags netgo -installsuffix netgo
     binary: copa
@@ -37,8 +38,5 @@ checksum:
   name_template: "{{ .ProjectName }}_checksums.txt"
   algorithm: sha256
 
-
-# DEFAULT_LDFLAGS   := -X $(BASE_PACKAGE_NAME)/pkg/version.GitCommit=$(GIT_COMMIT) \
-#   -X $(BASE_PACKAGE_NAME)/pkg/version.GitVersion=$(GIT_VERSION) \
-#   -X $(BASE_PACKAGE_NAME)/pkg/version.BuildDate=$(BUILD_DATE) \
-  # -X main.version=$(CLI_VERSION)
+sboms:
+  - artifacts: archive
