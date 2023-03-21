@@ -6,7 +6,7 @@ on:
   workflow_dispatch:
     inputs:
       release_version:
-        description: 'Which version are we creating a release pull request for?'
+        description: '🤖 Which version are we creating a release pull request for?'
         required: true
 
 permissions:
@@ -68,7 +68,8 @@ jobs:
 
       - run: make release-manifest
 
-      - run: make version-docs NEWVERSION=v${MAJOR_VERSION}.${MINOR_VERSION}.x
+      - if: github.event_name == 'push'
+        run: make version-docs NEWVERSION=v${MAJOR_VERSION}.${MINOR_VERSION}.x
 
       - name: Create release pull request
         uses: peter-evans/create-pull-request@v4
