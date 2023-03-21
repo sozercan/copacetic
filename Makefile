@@ -137,6 +137,6 @@ version-docs:
 	docker run --rm \
 		-v $(shell pwd)/website:/website \
 		-w /website \
-		$(IDFLAGS) \
+		-u $(shell id -u):$(shell id -g) \
 		node:${NODE_VERSION} \
-		sh -c "yarn install --frozen lockfile && yarn run docusaurus docs:version ${CLI_VERSION}"
+		sh -c "yarn install --frozen lockfile && yarn run docusaurus docs:version ${NEWVERSION}"
