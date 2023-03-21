@@ -7,7 +7,7 @@
 # Global: Variables                                                            #
 ################################################################################
 
-CLI_VERSION := v0.1.0
+CLI_VERSION := v0.2.0
 
 # Formatted symbol markers (=>, [needs root]) for info output
 INFOMARK = $(shell printf "\033[34;1m=>\033[0m")
