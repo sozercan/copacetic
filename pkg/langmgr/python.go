@@ -34,10 +34,10 @@ func isLessThanAPKVersion(v1, v2 string) bool {
 	return apkV1.LessThan(apkV2)
 }
 
-func (pm *pythonManager) InstallUpdates(ctx context.Context, manifest *types.UpdateManifest) (*llb.State, error) {
+func (pm *pythonManager) InstallUpdates(ctx context.Context, manifest *types.UpdateManifest, imageState *llb.State) (*llb.State, error) {
 	// Resolve set of unique packages to update
 	apkComparer := VersionComparer{isValidAPKVersion, isLessThanAPKVersion}
-	updates, err := GetUniqueLatestUpdates(manifest.Updates, apkComparer)
+	updates, err := GetUniqueLatestUpdates(manifest.LangUpdates, apkComparer)
 	if err != nil {
 		return nil, err
 	}
@@ -47,7 +47,7 @@ func (pm *pythonManager) InstallUpdates(ctx context.Context, manifest *types.Upd
 	}
 	log.Debugf("latest unique pips: %v", updates)
 
-	updatedImageState, err := pm.upgradePackages(ctx, updates)
+	updatedImageState, err := pm.upgradePackages(ctx, updates, imageState)
 	if err != nil {
 		return nil, err
 	}
@@ -68,9 +68,9 @@ func (pm *pythonManager) InstallUpdates(ctx context.Context, manifest *types.Upd
 // TODO: support "distroless" Alpine images (e.g. APKO images)
 // Still assumes that APK exists in the target image and is pathed, which can be addressed by
 // mounting a copy of apk-tools-static into the image and invoking apk-static directly.
-func (pm *pythonManager) upgradePackages(ctx context.Context, updates types.UpdatePackages) (*llb.State, error) {
+func (pm *pythonManager) upgradePackages(ctx context.Context, updates types.LangUpdatePackages, imageState *llb.State) (*llb.State, error) {
 	// TODO: Add support for custom APK config
-	pipUpdated := pm.config.ImageState.Run(llb.Shlex("pip check"), llb.WithProxy(utils.GetProxy())).Root()
+	// pipUpdated := pm.config.ImageState.Run(llb.Shlex("pip check"), llb.WithProxy(utils.GetProxy())).Root()
 
 	// Add all requested update packages
 	// This works around cases where some packages (for example, tiff) require other packages in it's dependency tree to be updated
@@ -103,7 +103,7 @@ func (pm *pythonManager) upgradePackages(ctx context.Context, updates types.Upda
 	}
 
 	// Diff the installed updates and merge that into the target image
-	patchDiff := llb.Diff(pipUpdated, pipInstalled)
+	patchDiff := llb.Diff(*imageState, pipInstalled)
 	patchMerge := llb.Merge([]llb.State{pm.config.ImageState, patchDiff})
 	return &patchMerge, nil
 }

@@ -50,7 +50,7 @@ type VersionComparer struct {
 	LessThan func(string, string) bool
 }
 
-func GetUniqueLatestUpdates(updates types.UpdatePackages, cmp VersionComparer) (types.UpdatePackages, error) {
+func GetUniqueLatestUpdates(updates types.OSUpdatePackages, cmp VersionComparer) (types.OSUpdatePackages, error) {
 	dict := make(map[string]string)
 	var allErrors *multierror.Error
 	for _, u := range updates {
@@ -72,7 +72,7 @@ func GetUniqueLatestUpdates(updates types.UpdatePackages, cmp VersionComparer) (
 		return nil, allErrors.ErrorOrNil()
 	}
 
-	out := types.UpdatePackages{}
+	out := types.OSUpdatePackages{}
 	for k, v := range dict {
 		out = append(out, types.UpdatePackage{Name: k, Version: v})
 	}
@@ -91,7 +91,7 @@ type PackageInfoReader interface {
 
 type UpdateMap map[string]*UpdatePackageInfo
 
-func GetValidatedUpdatesMap(updates types.UpdatePackages, cmp VersionComparer, reader PackageInfoReader, stagingPath string) (UpdateMap, error) {
+func GetValidatedUpdatesMap(updates types.OSUpdatePackages, cmp VersionComparer, reader PackageInfoReader, stagingPath string) (UpdateMap, error) {
 	m := make(UpdateMap)
 	for _, update := range updates {
 		m[update.Name] = &UpdatePackageInfo{Version: update.Version}

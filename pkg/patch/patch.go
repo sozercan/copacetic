@@ -17,6 +17,7 @@ import (
 	ref "github.com/distribution/distribution/reference"
 	"github.com/project-copacetic/copacetic/pkg/buildkit"
 	"github.com/project-copacetic/copacetic/pkg/langmgr"
+	"github.com/project-copacetic/copacetic/pkg/pkgmgr"
 	"github.com/project-copacetic/copacetic/pkg/report"
 	"github.com/project-copacetic/copacetic/pkg/utils"
 )
@@ -116,32 +117,31 @@ func patchWithContext(ctx context.Context, buildkitAddr, image, reportFile, patc
 		return err
 	}
 
-	// // Create package manager helper
-	// pkgmgr, err := pkgmgr.GetPackageManager(updates.OSType, config, workingFolder)
-	// if err != nil {
-	// 	return err
-	// }
-
-	// // Export the patched image state to Docker
-	// // TODO: Add support for other output modes as buildctl does.
-	// patchedImageState, err := pkgmgr.InstallUpdates(ctx, updates)
-	// if err != nil {
-	// 	return err
-	// }
-
-
-	// Create package manager helper
-	langmgr, err := langmgr.GetLanguageManager(updates.OSType, config, workingFolder)
+	// Create OS package manager helper
+	pkgmgr, err := pkgmgr.GetPackageManager(updates.OSType, config, workingFolder)
 	if err != nil {
 		return err
 	}
 
 	// Export the patched image state to Docker
 	// TODO: Add support for other output modes as buildctl does.
-	patchedImageState, err := langmgr.InstallUpdates(ctx, updates)
+	osPatchedImageState, err := pkgmgr.InstallUpdates(ctx, updates)
 	if err != nil {
 		return err
 	}
 
-	return buildkit.SolveToDocker(ctx, config.Client, patchedImageState, config.ConfigData, patchedImageName)
+
+	// Create language package manager helper
+	langmgr, err := langmgr.GetLanguageManager(updates.OSType, config, workingFolder)
+	if err != nil {
+		return err
+	}
+
+	// Export the patched image state to Docker
+	langPatchedImageState, err := langmgr.InstallUpdates(ctx, updates, osPatchedImageState)
+	if err != nil {
+		return err
+	}
+
+	return buildkit.SolveToDocker(ctx, config.Client, langPatchedImageState, config.ConfigData, patchedImageName)
 }

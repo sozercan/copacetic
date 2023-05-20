@@ -27,7 +27,7 @@ const (
 )
 
 type LangManager interface {
-	InstallUpdates(context.Context, *types.UpdateManifest) (*llb.State, error)
+	InstallUpdates(context.Context, *types.UpdateManifest, *llb.State) (*llb.State, error)
 }
 
 func GetLanguageManager(osType string, config *buildkit.Config, workingFolder string) (LangManager, error) {
@@ -52,7 +52,7 @@ type VersionComparer struct {
 	LessThan func(string, string) bool
 }
 
-func GetUniqueLatestUpdates(updates types.UpdatePackages, cmp VersionComparer) (types.UpdatePackages, error) {
+func GetUniqueLatestUpdates(updates types.LangUpdatePackages, cmp VersionComparer) (types.LangUpdatePackages, error) {
 	dict := make(map[string]string)
 	var allErrors *multierror.Error
 	for _, u := range updates {
@@ -74,7 +74,7 @@ func GetUniqueLatestUpdates(updates types.UpdatePackages, cmp VersionComparer) (
 		return nil, allErrors.ErrorOrNil()
 	}
 
-	out := types.UpdatePackages{}
+	out := types.LangUpdatePackages{}
 	for k, v := range dict {
 		out = append(out, types.UpdatePackage{Name: k, Version: v})
 	}
@@ -93,7 +93,7 @@ type PackageInfoReader interface {
 
 type UpdateMap map[string]*UpdatePackageInfo
 
-func GetValidatedUpdatesMap(updates types.UpdatePackages, cmp VersionComparer, reader PackageInfoReader, stagingPath string) (UpdateMap, error) {
+func GetValidatedUpdatesMap(updates types.LangUpdatePackages, cmp VersionComparer, reader PackageInfoReader, stagingPath string) (UpdateMap, error) {
 	m := make(UpdateMap)
 	for _, update := range updates {
 		m[update.Name] = &UpdatePackageInfo{Version: update.Version}

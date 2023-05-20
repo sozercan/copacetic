@@ -36,6 +36,13 @@ func (t *TrivyParser) Parse(file string) (*types.UpdateManifest, error) {
 		return nil, err
 	}
 
+	updates := types.UpdateManifest{
+		OSType:    report.Metadata.OS.Family,
+		OSVersion: report.Metadata.OS.Name,
+		Arch:      report.Metadata.ImageConfig.Architecture,
+	}
+
+
 	// Precondition check
 	result := trivyTypes.Result{}
 	for i := range report.Results {
@@ -44,40 +51,70 @@ func (t *TrivyParser) Parse(file string) (*types.UpdateManifest, error) {
 			if result.Class != "" {
 				return nil, errors.New("unexpected multiple results for os-pkgs")
 			}
-			result = *r
+			// result = *r
+			for v := range r.Vulnerabilities {
+				vuln := &r.Vulnerabilities[v]
+				if vuln.FixedVersion != "" {
+
+					updates.OSUpdates = append(updates.OSUpdates, types.UpdatePackage{
+						Name: vuln.PkgName,
+						Type: r.Type,
+						Version: vuln.FixedVersion,
+					})
+				}
+			}
 		}
 		if r.Class == "lang-pkgs" {
 			if r.Target == "Python" {
 				// if result.Class != "" {
 				// 	return nil, errors.New("unexpected multiple results for lang-pkgs")
 				// }
-				result = *r
+				// result = *r
+				for v := range r.Vulnerabilities {
+					vuln := &r.Vulnerabilities[v]
+					if vuln.FixedVersion != "" {
+						if strings.Contains(vuln.FixedVersion, ",") {
+							splitVersions := strings.Split(vuln.FixedVersion, ",")
+							vuln.FixedVersion = strings.TrimSpace(splitVersions[0])
+						}
+
+						updates.LangUpdates = append(updates.LangUpdates, types.UpdatePackage{
+							Name: vuln.PkgName,
+							Type: r.Type,
+							Version: vuln.FixedVersion,
+						})
+					}
+				}
 			}
 		}
 	}
-	if result.Class == "" {
-		return nil, errors.New("no scanning results for os-pkgs or lang-pkgs found")
-	}
+	// if result.Class == "" {
+	// 	return nil, errors.New("no scanning results for os-pkgs or lang-pkgs found")
+	// }
 
-	updates := types.UpdateManifest{
-		OSType:    report.Metadata.OS.Family,
-		OSVersion: report.Metadata.OS.Name,
-		Arch:      report.Metadata.ImageConfig.Architecture,
-	}
 
-	for i := range result.Vulnerabilities {
-		vuln := &result.Vulnerabilities[i]
-		if vuln.FixedVersion != "" {
+	// for i := range report.Results {
+	// 	r := &report.Results[i]
+	// 	for v := range result.Vulnerabilities {
+	// 		vuln := &result.Vulnerabilities[v]
+	// 		if vuln.FixedVersion != "" {
 
-			if strings.Contains(vuln.FixedVersion, ",") {
-				splitVersions := strings.Split(vuln.FixedVersion, ",")
-				vuln.FixedVersion = strings.TrimSpace(splitVersions[0])
-			}
+	// 			if r.Class == "os-pkgs" {
+	// 				updates.OSUpdates = append(updates.OSUpdates, types.UpdatePackage{Name: vuln.PkgName, Version: vuln.FixedVersion})
+	// 			}
 
-			updates.Updates = append(updates.Updates, types.UpdatePackage{Name: vuln.PkgName, Version: vuln.FixedVersion})
-			spew.Dump(updates)
-		}
-	}
+	// 			if r.Class == "lang-pkgs" {
+	// 				if strings.Contains(vuln.FixedVersion, ",") {
+	// 					splitVersions := strings.Split(vuln.FixedVersion, ",")
+	// 					vuln.FixedVersion = strings.TrimSpace(splitVersions[0])
+	// 				}
+
+	// 				updates.LangUpdates = append(updates.LangUpdates, types.UpdatePackage{Name: vuln.PkgName, Type: r.Type, Version: vuln.FixedVersion})
+	// 			}
+	// 		}
+	// 	}
+	// }
+	spew.Dump(updates)
 
 	return &updates, nil
 }

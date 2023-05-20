@@ -56,7 +56,7 @@ func apkReadResultsManifest(path string) ([]string, error) {
 	return lines, nil
 }
 
-func validateAPKPackageVersions(updates types.UpdatePackages, cmp VersionComparer, resultsPath string) error {
+func validateAPKPackageVersions(updates types.OSUpdatePackages, cmp VersionComparer, resultsPath string) error {
 	lines, err := apkReadResultsManifest(resultsPath)
 	if err != nil {
 		return err
@@ -121,7 +121,7 @@ func validateAPKPackageVersions(updates types.UpdatePackages, cmp VersionCompare
 func (am *apkManager) InstallUpdates(ctx context.Context, manifest *types.UpdateManifest) (*llb.State, error) {
 	// Resolve set of unique packages to update
 	apkComparer := VersionComparer{isValidAPKVersion, isLessThanAPKVersion}
-	updates, err := GetUniqueLatestUpdates(manifest.Updates, apkComparer)
+	updates, err := GetUniqueLatestUpdates(manifest.OSUpdates, apkComparer)
 	if err != nil {
 		return nil, err
 	}
@@ -152,7 +152,7 @@ func (am *apkManager) InstallUpdates(ctx context.Context, manifest *types.Update
 // TODO: support "distroless" Alpine images (e.g. APKO images)
 // Still assumes that APK exists in the target image and is pathed, which can be addressed by
 // mounting a copy of apk-tools-static into the image and invoking apk-static directly.
-func (am *apkManager) upgradePackages(ctx context.Context, updates types.UpdatePackages) (*llb.State, error) {
+func (am *apkManager) upgradePackages(ctx context.Context, updates types.OSUpdatePackages) (*llb.State, error) {
 	// TODO: Add support for custom APK config
 	apkUpdated := am.config.ImageState.Run(llb.Shlex("apk update"), llb.WithProxy(utils.GetProxy())).Root()
 

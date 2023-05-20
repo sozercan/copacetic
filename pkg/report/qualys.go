@@ -48,7 +48,7 @@ func parseQualysOSInfo(osNode *xmlquery.Node) (*osInfo, error) {
 	return nil, errors.New("report is for unsupported non-Linux OS")
 }
 
-func parseQualysUpdatePackages(resultNode *xmlquery.Node) (types.UpdatePackages, error) {
+func parseQualysUpdatePackages(resultNode *xmlquery.Node) (types.OSUpdatePackages, error) {
 	// Based on sample string in CDATA (note inclusion of newlines):
 	// #table cols="3"
 	// Package Installed_Version Required_Version
@@ -60,7 +60,7 @@ func parseQualysUpdatePackages(resultNode *xmlquery.Node) (types.UpdatePackages,
 		log.Error(err)
 		return nil, err
 	}
-	updates := types.UpdatePackages{}
+	updates := types.OSUpdatePackages{}
 	lines := strings.Split(text[len(vulnDataHeader):], "\n")
 	for _, line := range lines {
 		tokens := strings.Split(line, " ")
@@ -120,7 +120,7 @@ func (t *QualysParser) Parse(file string) (*types.UpdateManifest, error) {
 		if err != nil {
 			return nil, err
 		}
-		updates.Updates = append(updates.Updates, update...)
+		updates.OSUpdates = append(updates.OSUpdates, update...)
 	}
 	return &updates, nil
 }

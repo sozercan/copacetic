@@ -162,7 +162,7 @@ func getRPMDBType(dir string) rpmDBType {
 func (rm *rpmManager) InstallUpdates(ctx context.Context, manifest *types.UpdateManifest) (*llb.State, error) {
 	// Resolve set of unique packages to update
 	rpmComparer := VersionComparer{isValidRPMVersion, isLessThanRPMVersion}
-	updates, err := GetUniqueLatestUpdates(manifest.Updates, rpmComparer)
+	updates, err := GetUniqueLatestUpdates(manifest.OSUpdates, rpmComparer)
 	if err != nil {
 		return nil, err
 	}
@@ -301,7 +301,7 @@ func (rm *rpmManager) probeRPMStatus(ctx context.Context, toolImage string) erro
 //
 // TODO: Support RPM-based images with valid rpm status but missing tools. (e.g. calico images > v3.21.0)
 // i.e. extra RunOption to mount a copy of rpm tools installed into the image and invoking that.
-func (rm *rpmManager) installUpdates(ctx context.Context, updates types.UpdatePackages) (*llb.State, error) {
+func (rm *rpmManager) installUpdates(ctx context.Context, updates types.OSUpdatePackages) (*llb.State, error) {
 	// Format the requested updates into a space-separated string
 	pkgStrings := []string{}
 	for _, u := range updates {
@@ -343,7 +343,7 @@ func (rm *rpmManager) installUpdates(ctx context.Context, updates types.UpdatePa
 	return &patchMerge, nil
 }
 
-func (rm *rpmManager) unpackAndMergeUpdates(ctx context.Context, updates types.UpdatePackages, toolImage string) (*llb.State, error) {
+func (rm *rpmManager) unpackAndMergeUpdates(ctx context.Context, updates types.OSUpdatePackages, toolImage string) (*llb.State, error) {
 	// Spin up a build tooling container to fetch and unpack packages to create patch layer.
 	// Pull family:version -> need to create version to base image map
 	toolingBase := llb.Image(toolImage,
@@ -440,7 +440,7 @@ func rpmReadResultsManifest(path string) ([]string, error) {
 	return lines, nil
 }
 
-func validateRPMPackageVersions(updates types.UpdatePackages, cmp VersionComparer, resultsPath string) error {
+func validateRPMPackageVersions(updates types.OSUpdatePackages, cmp VersionComparer, resultsPath string) error {
 	lines, err := rpmReadResultsManifest(resultsPath)
 	if err != nil {
 		return err
