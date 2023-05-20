@@ -23,7 +23,7 @@ const (
 	resultsPath    = "/" + copaPrefix + "out"
 	downloadPath   = "/" + copaPrefix + "downloads"
 	unpackPath     = "/" + copaPrefix + "unpacked"
-	resultManifest = "results.manifest"
+	resultManifest = "osresults.manifest"
 )
 
 type PackageManager interface {

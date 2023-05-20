@@ -23,7 +23,7 @@ const (
 	resultsPath    = "/" + copaPrefix + "out"
 	downloadPath   = "/" + copaPrefix + "downloads"
 	unpackPath     = "/" + copaPrefix + "unpacked"
-	resultManifest = "results.manifest"
+	resultManifest = "langresults.manifest"
 )
 
 type LangManager interface {

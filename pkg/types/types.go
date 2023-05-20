@@ -8,7 +8,8 @@ package types
 type UpdatePackage struct {
 	Name    string `json:"name"`
 	Version string `json:"version"`
-	Type    string `json:"type,omitempty"`
+	Type    string `json:"type"`
+	Class   string `json:"class"`
 }
 
 type OSUpdatePackages []UpdatePackage

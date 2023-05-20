@@ -59,6 +59,7 @@ func (t *TrivyParser) Parse(file string) (*types.UpdateManifest, error) {
 					updates.OSUpdates = append(updates.OSUpdates, types.UpdatePackage{
 						Name: vuln.PkgName,
 						Type: r.Type,
+						Class: string(r.Class),
 						Version: vuln.FixedVersion,
 					})
 				}
@@ -81,6 +82,7 @@ func (t *TrivyParser) Parse(file string) (*types.UpdateManifest, error) {
 						updates.LangUpdates = append(updates.LangUpdates, types.UpdatePackage{
 							Name: vuln.PkgName,
 							Type: r.Type,
+							Class: string(r.Class),
 							Version: vuln.FixedVersion,
 						})
 					}
