@@ -10,6 +10,19 @@ type UpdatePackage struct {
 	Version string `json:"version"`
 }
 
+
+// type OSUpdatePackages []UpdatePackage
+// type LangUpdatePackages []UpdatePackage
+
+// type UpdateManifest struct {
+// 	OSType      string             `json:"ostype"`
+// 	OSVersion   string             `json:"osversion"`
+// 	Arch        string             `json:"arch"`
+// 	OSUpdates   OSUpdatePackages   `json:"osupdates"`
+// 	LangUpdates LangUpdatePackages `json:"langupdates"`
+// }
+
+
 type UpdatePackages []UpdatePackage
 
 type UpdateManifest struct {

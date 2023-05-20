@@ -9,8 +9,10 @@ import (
 	"encoding/json"
 	"errors"
 	"os"
+	"strings"
 
 	trivyTypes "github.com/aquasecurity/trivy/pkg/types"
+	"github.com/davecgh/go-spew/spew"
 	"github.com/project-copacetic/copacetic/pkg/types"
 )
 
@@ -44,9 +46,17 @@ func (t *TrivyParser) Parse(file string) (*types.UpdateManifest, error) {
 			}
 			result = *r
 		}
+		if r.Class == "lang-pkgs" {
+			if r.Target == "Python" {
+				// if result.Class != "" {
+				// 	return nil, errors.New("unexpected multiple results for lang-pkgs")
+				// }
+				result = *r
+			}
+		}
 	}
 	if result.Class == "" {
-		return nil, errors.New("no scanning results for os-pkgs found")
+		return nil, errors.New("no scanning results for os-pkgs or lang-pkgs found")
 	}
 
 	updates := types.UpdateManifest{
@@ -58,7 +68,14 @@ func (t *TrivyParser) Parse(file string) (*types.UpdateManifest, error) {
 	for i := range result.Vulnerabilities {
 		vuln := &result.Vulnerabilities[i]
 		if vuln.FixedVersion != "" {
+
+			if strings.Contains(vuln.FixedVersion, ",") {
+				splitVersions := strings.Split(vuln.FixedVersion, ",")
+				vuln.FixedVersion = strings.TrimSpace(splitVersions[0])
+			}
+
 			updates.Updates = append(updates.Updates, types.UpdatePackage{Name: vuln.PkgName, Version: vuln.FixedVersion})
+			spew.Dump(updates)
 		}
 	}
 
