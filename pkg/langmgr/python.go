@@ -70,7 +70,7 @@ func (pm *pythonManager) InstallUpdates(ctx context.Context, manifest *types.Upd
 // mounting a copy of apk-tools-static into the image and invoking apk-static directly.
 func (pm *pythonManager) upgradePackages(ctx context.Context, updates types.LangUpdatePackages, imageState *llb.State) (*llb.State, error) {
 	// TODO: Add support for custom APK config
-	// pipUpdated := pm.config.ImageState.Run(llb.Shlex("pip check"), llb.WithProxy(utils.GetProxy())).Root()
+	pipUpdated := pm.config.ImageState.Run(llb.Shlex("pip check"), llb.WithProxy(utils.GetProxy())).Root()
 
 	// Add all requested update packages
 	// This works around cases where some packages (for example, tiff) require other packages in it's dependency tree to be updated
@@ -103,7 +103,7 @@ func (pm *pythonManager) upgradePackages(ctx context.Context, updates types.Lang
 	}
 
 	// Diff the installed updates and merge that into the target image
-	patchDiff := llb.Diff(*imageState, pipInstalled)
-	patchMerge := llb.Merge([]llb.State{pm.config.ImageState, patchDiff})
+	patchDiff := llb.Diff(pipUpdated, pipInstalled)
+	patchMerge := llb.Merge([]llb.State{*imageState, patchDiff})
 	return &patchMerge, nil
 }
