@@ -1,0 +1,597 @@
+{
+  "SchemaVersion": 2,
+  "ArtifactName": "mcr.microsoft.com/azureml/minimal-ubuntu20.04-py38-cpu-inference:20221111.v1-patched",
+  "ArtifactType": "container_image",
+  "Metadata": {
+    "OS": {
+      "Family": "ubuntu",
+      "Name": "20.04"
+    },
+    "ImageID": "sha256:5898dc2cadbf521b7da4bfe92a9a04d15af09820c4252d21b5d04b9efc26e5aa",
+    "DiffIDs": [
+      "sha256:f4462d5b2da2985f37409c9b257afd2b9fb82356ce4e43e804ee34214242e34a",
+      "sha256:7b2831225df370020f1408db5e8cd3a88a71b7c6d855d929ed8eb755a9d0e6e9",
+      "sha256:f13f6393a9b3687f49110b2e01c4baf443b956239957bba53b76e9644f5a5721",
+      "sha256:3204937635f5c8ed36d0618c3f29f46e2731905df8cf3b9ab99da78baf9401f0",
+      "sha256:cd7f352017de6b53cdd07c593839ff727292ddba406f853407de7902e1e66b6b",
+      "sha256:dd3799462e5f9f92e6743f85cb30fdb904f846d388ff7045fd4015c72b7c1c65",
+      "sha256:47f4d801bc6aca64a66f8b89f8b1082f76ab9c3ff1644e03b7680d42e9685f31",
+      "sha256:7de5bd2a19585f6005de90ee5d89f00c2afe41d15cec4ea1cc83597ae0086b89",
+      "sha256:c0b72bfaa8dbb1c1506a67f6a6dd15ef1e56e770c28818a973c2880c887a9cab",
+      "sha256:97792bb7d43b398b093f304838ba6abe88e9f7f977814f039c46a42413eef949",
+      "sha256:b5e8832ab6bd2a0d08a68cbf3d61e4ded3e59d10098e2dfdbf1b9cb7fa069ffb",
+      "sha256:6dc55b13cb8b1ec903d60a6cbbadfe58e6d4e60552e2c53b515c05d6d6f97683",
+      "sha256:91e957633e0dfb326076ab7d62bf6823d15efb78c58d39a6caff1a1a628cfe30",
+      "sha256:bd3b0d0357222bb7a7750e2687a4b99b222be0ae87c48733213b8e1f5e1ee97a",
+      "sha256:cbb181455d5a32ac621043725894f5f88225d47166e1f94ab79732e36b3b98ae",
+      "sha256:8b6d27e5cb343ee11c0f5502b10e801568385864c24743ce064af899eb912a2c",
+      "sha256:5696d5c72da16662be1053eb907c483200f705f7173430c17a5fcd51505276d4",
+      "sha256:13532de653562060ce44c2f7d1a5db16a66f6e6bd94dfe70f86ac418fdc89dc2"
+    ],
+    "RepoTags": [
+      "mcr.microsoft.com/azureml/minimal-ubuntu20.04-py38-cpu-inference:20221111.v1-patched"
+    ],
+    "ImageConfig": {
+      "architecture": "amd64",
+      "container": "cdd797b6822444f96076e69e316691e294ba5cc041c898ce85c42b9ca5b2042e",
+      "created": "2022-11-11T20:24:39.837902405Z",
+      "docker_version": "20.10.18+azure-2",
+      "history": [
+        {
+          "created": "2022-10-25T01:53:34Z",
+          "created_by": "/bin/sh -c #(nop) ADD file:7633003155a1059419aa1a6756fafb6e4f419d65bff7feb7c945de1e29dccb1e in / "
+        },
+        {
+          "created": "2022-10-25T01:53:35Z",
+          "created_by": "/bin/sh -c #(nop)  CMD [\"bash\"]",
+          "empty_layer": true
+        },
+        {
+          "created": "2022-11-11T19:42:03Z",
+          "created_by": "/bin/sh -c #(nop)  ARG IMAGE_INFORMATION=None",
+          "empty_layer": true
+        },
+        {
+          "created": "2022-11-11T19:42:04Z",
+          "created_by": "/bin/sh -c #(nop)  USER root:root",
+          "empty_layer": true
+        },
+        {
+          "created": "2022-11-11T19:42:05Z",
+          "created_by": "/bin/sh -c #(nop)  ENV LANG=C.UTF-8 LC_ALL=C.UTF-8",
+          "empty_layer": true
+        },
+        {
+          "created": "2022-11-11T19:42:06Z",
+          "created_by": "/bin/sh -c #(nop)  ENV DEBIAN_FRONTEND=noninteractive",
+          "empty_layer": true
+        },
+        {
+          "created": "2022-11-11T19:42:07Z",
+          "created_by": "/bin/sh -c #(nop)  ARG LIBCURL",
+          "empty_layer": true
+        },
+        {
+          "created": "2022-11-11T19:42:08Z",
+          "created_by": "/bin/sh -c #(nop)  ARG LIBLTTNG",
+          "empty_layer": true
+        },
+        {
+          "created": "2022-11-11T19:42:09Z",
+          "created_by": "/bin/sh -c #(nop)  ARG LIBSSL",
+          "empty_layer": true
+        },
+        {
+          "created": "2022-11-11T19:43:55Z",
+          "created_by": "|4 IMAGE_INFORMATION=inference-base-2004:20221111.v17 LIBCURL=libcurl4 LIBLTTNG=liblttng-ust0 LIBSSL=libssl1.1 /bin/sh -c apt-get update \u0026\u0026     apt-get install -y software-properties-common \u0026\u0026     add-apt-repository -y ppa:adiscon/v8-stable \u0026\u0026     apt-get purge -y software-properties-common \u0026\u0026     apt-get update \u0026\u0026     apt-get install -y --no-install-recommends                     nginx-light                     runit                     wget                     $LIBCURL                     $LIBLTTNG                     libunwind8                     libxml++2.6-2v5                     psmisc                     build-essential                     unzip                     $LIBSSL                     systemd \u0026\u0026    apt-get autoremove -y \u0026\u0026     apt-get clean -y \u0026\u0026     rm -rf /usr/share/man/* \u0026\u0026     rm -rf /var/lib/apt/lists/*"
+        },
+        {
+          "created": "2022-11-11T19:43:58Z",
+          "created_by": "/bin/sh -c #(nop) COPY dir:5b48b984f14f1ba76581ba44a965b9b5136bdb3576183bacac08807a8ba1b749 in / "
+        },
+        {
+          "created": "2022-11-11T19:44:00Z",
+          "created_by": "|4 IMAGE_INFORMATION=inference-base-2004:20221111.v17 LIBCURL=libcurl4 LIBLTTNG=liblttng-ust0 LIBSSL=libssl1.1 /bin/sh -c ln -s /etc/nginx/sites-available/app /etc/nginx/sites-enabled/app \u0026\u0026     rm -f /etc/nginx/sites-enabled/default"
+        },
+        {
+          "created": "2022-11-11T19:44:01Z",
+          "created_by": "/bin/sh -c #(nop)  ENV SVDIR=/var/runit",
+          "empty_layer": true
+        },
+        {
+          "created": "2022-11-11T19:44:02Z",
+          "created_by": "/bin/sh -c #(nop)  ENV WORKER_TIMEOUT=300",
+          "empty_layer": true
+        },
+        {
+          "created": "2022-11-11T19:44:02Z",
+          "created_by": "/bin/sh -c #(nop)  ENV AZUREML_INFERENCE_SERVER_HTTP_ENABLED=True",
+          "empty_layer": true
+        },
+        {
+          "created": "2022-11-11T19:44:03Z",
+          "created_by": "/bin/sh -c #(nop)  EXPOSE 5001",
+          "empty_layer": true
+        },
+        {
+          "created": "2022-11-11T19:44:05Z",
+          "created_by": "/bin/sh -c #(nop) COPY file:2fa4de2d5b481b32f536c9d19767e38802cf6d2c74c47789efd3bb6d6554eba2 in /tmp/ "
+        },
+        {
+          "created": "2022-11-11T19:44:06Z",
+          "created_by": "|4 IMAGE_INFORMATION=inference-base-2004:20221111.v17 LIBCURL=libcurl4 LIBLTTNG=liblttng-ust0 LIBSSL=libssl1.1 /bin/sh -c bash generate_notice.sh \u0026\u0026 rm generate_notice.sh"
+        },
+        {
+          "created": "2022-11-11T19:44:08Z",
+          "created_by": "|4 IMAGE_INFORMATION=inference-base-2004:20221111.v17 LIBCURL=libcurl4 LIBLTTNG=liblttng-ust0 LIBSSL=libssl1.1 /bin/sh -c echo $IMAGE_INFORMATION \u003e /IMAGE_INFORMATION"
+        },
+        {
+          "created": "2022-11-11T19:44:10Z",
+          "created_by": "|4 IMAGE_INFORMATION=inference-base-2004:20221111.v17 LIBCURL=libcurl4 LIBLTTNG=liblttng-ust0 LIBSSL=libssl1.1 /bin/sh -c useradd --create-home dockeruser"
+        },
+        {
+          "created": "2022-11-11T19:44:11Z",
+          "created_by": "|4 IMAGE_INFORMATION=inference-base-2004:20221111.v17 LIBCURL=libcurl4 LIBLTTNG=liblttng-ust0 LIBSSL=libssl1.1 /bin/sh -c bash /tmp/grant_ownership.sh \u0026\u0026 rm -f /tmp/grant_ownership.sh"
+        },
+        {
+          "created": "2022-11-11T19:44:12Z",
+          "created_by": "/bin/sh -c #(nop)  USER dockeruser",
+          "empty_layer": true
+        },
+        {
+          "created": "2022-11-11T19:44:13Z",
+          "created_by": "/bin/sh -c #(nop)  ENV PATH=/opt/miniconda/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin",
+          "empty_layer": true
+        },
+        {
+          "created": "2022-11-11T19:44:14Z",
+          "created_by": "/bin/sh -c #(nop)  ARG MINICONDA_URL",
+          "empty_layer": true
+        },
+        {
+          "created": "2022-11-11T19:44:36Z",
+          "created_by": "|4 IMAGE_INFORMATION=inference-base-2004:20221111.v17 LIBCURL=libcurl4 LIBLTTNG=liblttng-ust0 LIBSSL=libssl1.1 /bin/sh -c wget -qO /tmp/miniconda.sh https://repo.continuum.io/miniconda/Miniconda3-py39_4.11.0-Linux-x86_64.sh \u0026\u0026     bash /tmp/miniconda.sh -bf -p /opt/miniconda \u0026\u0026     conda clean -ay \u0026\u0026     rm -rf /opt/miniconda/pkgs \u0026\u0026     rm -f /tmp/miniconda.sh \u0026\u0026     find /opt/miniconda -type d -name __pycache__ | xargs rm -rf"
+        },
+        {
+          "created": "2022-11-11T19:44:38Z",
+          "created_by": "/bin/sh -c #(nop)  ENV AZUREML_CONDA_ENVIRONMENT_PATH=/opt/miniconda/envs/amlenv",
+          "empty_layer": true
+        },
+        {
+          "created": "2022-11-11T19:44:39Z",
+          "created_by": "/bin/sh -c #(nop)  ENV PATH=/opt/miniconda/envs/amlenv/bin:/opt/miniconda/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin",
+          "empty_layer": true
+        },
+        {
+          "created": "2022-11-11T20:22:45Z",
+          "created_by": "/bin/sh -c #(nop)  ARG IMAGE_INFORMATION=None",
+          "empty_layer": true
+        },
+        {
+          "created": "2022-11-11T20:22:46Z",
+          "created_by": "/bin/sh -c #(nop)  ARG RESOURCES_DIR",
+          "empty_layer": true
+        },
+        {
+          "created": "2022-11-11T20:22:47Z",
+          "created_by": "/bin/sh -c #(nop)  ARG TEMP_ENV_YML=/tmp/env.yml",
+          "empty_layer": true
+        },
+        {
+          "created": "2022-11-11T20:22:48Z",
+          "created_by": "/bin/sh -c #(nop) COPY --chown=dockeruserfile:97bebf7e97f91c5dc894d6e3e181f1dbc675809a3b25bca733f6919cf8ef46bf in /tmp/env.yml "
+        },
+        {
+          "created": "2022-11-11T20:22:52Z",
+          "created_by": "|3 IMAGE_INFORMATION=minimal-ubuntu20.04-py38-cpu-inference:20221111.v17 RESOURCES_DIR=minimal/3.8 TEMP_ENV_YML=/tmp/env.yml /bin/sh -c conda init bash"
+        },
+        {
+          "created": "2022-11-11T20:24:28Z",
+          "created_by": "|3 IMAGE_INFORMATION=minimal-ubuntu20.04-py38-cpu-inference:20221111.v17 RESOURCES_DIR=minimal/3.8 TEMP_ENV_YML=/tmp/env.yml /bin/sh -c conda env create -f $TEMP_ENV_YML \u0026\u0026         rm -rf $TEMP_ENV_YML \u0026\u0026         CONDA_ROOT_DIR=$(conda info --root) \u0026\u0026         rm -rf \"$HOME/.cache/pip\" \u0026\u0026         conda clean -aqy \u0026\u0026         rm -rf \"$CONDA_ROOT_DIR/pkgs\" \u0026\u0026         find /opt/miniconda -type d -name __pycache__ -exec rm -rf {} +"
+        },
+        {
+          "created": "2022-11-11T20:24:30Z",
+          "created_by": "/bin/sh -c #(nop)  USER root",
+          "empty_layer": true
+        },
+        {
+          "created": "2022-11-11T20:24:31Z",
+          "created_by": "/bin/sh -c #(nop) COPY file:34ce865a1a85d5bb94215ce242f33a3779ec686704ab42ef31fbc2e477c47c9f in / "
+        },
+        {
+          "created": "2022-11-11T20:24:34Z",
+          "created_by": "|3 IMAGE_INFORMATION=minimal-ubuntu20.04-py38-cpu-inference:20221111.v17 RESOURCES_DIR=minimal/3.8 TEMP_ENV_YML=/tmp/env.yml /bin/sh -c bash generate_notice.sh \u0026\u0026 rm generate_notice.sh"
+        },
+        {
+          "created": "2022-11-11T20:24:36Z",
+          "created_by": "|3 IMAGE_INFORMATION=minimal-ubuntu20.04-py38-cpu-inference:20221111.v17 RESOURCES_DIR=minimal/3.8 TEMP_ENV_YML=/tmp/env.yml /bin/sh -c echo $IMAGE_INFORMATION \u003e /IMAGE_INFORMATION"
+        },
+        {
+          "created": "2022-11-11T20:24:38Z",
+          "created_by": "/bin/sh -c #(nop)  USER dockeruser",
+          "empty_layer": true
+        },
+        {
+          "created": "2022-11-11T20:24:39Z",
+          "created_by": "/bin/sh -c #(nop)  CMD [\"runsvdir\" \"/var/runit\"]",
+          "empty_layer": true
+        },
+        {
+          "created": "2023-05-21T22:59:32Z",
+          "created_by": "mount / from exec sh -c apt install --no-install-recommends --allow-change-held-packages -y libhx509-5-heimdal libsystemd0 linux-libc-dev systemd-timesyncd tar libasn1-8-heimdal python3.8-minimal libheimntlm0-heimdal ca-certificates libcurl4 libkrb5-3 libpam0g libwind0-heimdal nginx-light binutils-x86-64-linux-gnu libxml2 libssl1.1 krb5-locales libgssapi3-heimdal libnginx-mod-http-echo libpam-runtime libroken18-heimdal python3.8 binutils libheimbase1-heimdal libk5crypto3 libksba8 libpam-modules libudev1 openssl libbinutils libctf-nobfd0 libhcrypto4-heimdal libkrb5-26-heimdal libkrb5support0 libpam-modules-bin libpython3.8-minimal libpython3.8-stdlib binutils-common systemd libexpat1 libgnutls30 libgssapi-krb5-2 nginx-common libctf0 \u0026\u0026 apt clean -y",
+          "comment": "buildkit.exporter.image.v0"
+        },
+        {
+          "created": "2023-05-21T22:59:36Z",
+          "created_by": "mount / from exec pip install --upgrade Flask Werkzeug certifi cryptography setuptools wheel",
+          "comment": "buildkit.exporter.image.v0"
+        }
+      ],
+      "os": "linux",
+      "rootfs": {
+        "type": "layers",
+        "diff_ids": [
+          "sha256:f4462d5b2da2985f37409c9b257afd2b9fb82356ce4e43e804ee34214242e34a",
+          "sha256:7b2831225df370020f1408db5e8cd3a88a71b7c6d855d929ed8eb755a9d0e6e9",
+          "sha256:f13f6393a9b3687f49110b2e01c4baf443b956239957bba53b76e9644f5a5721",
+          "sha256:3204937635f5c8ed36d0618c3f29f46e2731905df8cf3b9ab99da78baf9401f0",
+          "sha256:cd7f352017de6b53cdd07c593839ff727292ddba406f853407de7902e1e66b6b",
+          "sha256:dd3799462e5f9f92e6743f85cb30fdb904f846d388ff7045fd4015c72b7c1c65",
+          "sha256:47f4d801bc6aca64a66f8b89f8b1082f76ab9c3ff1644e03b7680d42e9685f31",
+          "sha256:7de5bd2a19585f6005de90ee5d89f00c2afe41d15cec4ea1cc83597ae0086b89",
+          "sha256:c0b72bfaa8dbb1c1506a67f6a6dd15ef1e56e770c28818a973c2880c887a9cab",
+          "sha256:97792bb7d43b398b093f304838ba6abe88e9f7f977814f039c46a42413eef949",
+          "sha256:b5e8832ab6bd2a0d08a68cbf3d61e4ded3e59d10098e2dfdbf1b9cb7fa069ffb",
+          "sha256:6dc55b13cb8b1ec903d60a6cbbadfe58e6d4e60552e2c53b515c05d6d6f97683",
+          "sha256:91e957633e0dfb326076ab7d62bf6823d15efb78c58d39a6caff1a1a628cfe30",
+          "sha256:bd3b0d0357222bb7a7750e2687a4b99b222be0ae87c48733213b8e1f5e1ee97a",
+          "sha256:cbb181455d5a32ac621043725894f5f88225d47166e1f94ab79732e36b3b98ae",
+          "sha256:8b6d27e5cb343ee11c0f5502b10e801568385864c24743ce064af899eb912a2c",
+          "sha256:5696d5c72da16662be1053eb907c483200f705f7173430c17a5fcd51505276d4",
+          "sha256:13532de653562060ce44c2f7d1a5db16a66f6e6bd94dfe70f86ac418fdc89dc2"
+        ]
+      },
+      "config": {
+        "Cmd": [
+          "runsvdir",
+          "/var/runit"
+        ],
+        "Env": [
+          "PATH=/opt/miniconda/envs/amlenv/bin:/opt/miniconda/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin",
+          "LANG=C.UTF-8",
+          "LC_ALL=C.UTF-8",
+          "DEBIAN_FRONTEND=noninteractive",
+          "SVDIR=/var/runit",
+          "WORKER_TIMEOUT=300",
+          "AZUREML_INFERENCE_SERVER_HTTP_ENABLED=True",
+          "AZUREML_CONDA_ENVIRONMENT_PATH=/opt/miniconda/envs/amlenv"
+        ],
+        "Image": "sha256:869910db4db1c456b5617f109cecaf49744d933d1467ae7cb105ad357159f191",
+        "User": "dockeruser"
+      }
+    }
+  },
+  "Results": [
+    {
+      "Target": "mcr.microsoft.com/azureml/minimal-ubuntu20.04-py38-cpu-inference:20221111.v1-patched (ubuntu 20.04)",
+      "Class": "os-pkgs",
+      "Type": "ubuntu"
+    },
+    {
+      "Target": "Python",
+      "Class": "lang-pkgs",
+      "Type": "python-pkg",
+      "Vulnerabilities": [
+        {
+          "VulnerabilityID": "CVE-2022-23491",
+          "PkgName": "certifi",
+          "PkgPath": "opt/miniconda/lib/python3.9/site-packages/certifi-2021.10.8-py3.9.egg-info/PKG-INFO",
+          "InstalledVersion": "2021.10.8",
+          "FixedVersion": "2022.12.7",
+          "Layer": {
+            "Digest": "sha256:23f68593019a21ddd1d90a315b058ee0b0c0ae193fba6fd7063ec5b01976ad38",
+            "DiffID": "sha256:97792bb7d43b398b093f304838ba6abe88e9f7f977814f039c46a42413eef949"
+          },
+          "SeveritySource": "nvd",
+          "PrimaryURL": "https://avd.aquasec.com/nvd/cve-2022-23491",
+          "DataSource": {
+            "ID": "osv",
+            "Name": "Python Packaging Advisory Database",
+            "URL": "https://github.com/pypa/advisory-db"
+          },
+          "Title": "python-certifi: untrusted root certificates",
+          "Description": "Certifi is a curated collection of Root Certificates for validating the trustworthiness of SSL certificates while verifying the identity of TLS hosts. Certifi 2022.12.07 removes root certificates from \"TrustCor\" from the root store. These are in the process of being removed from Mozilla's trust store. TrustCor's root certificates are being removed pursuant to an investigation prompted by media reporting that TrustCor's ownership also operated a business that produced spyware. Conclusions of Mozilla's investigation can be found in the linked google group discussion.",
+          "Severity": "HIGH",
+          "CweIDs": [
+            "CWE-345"
+          ],
+          "CVSS": {
+            "ghsa": {
+              "V3Vector": "CVSS:3.1/AV:N/AC:L/PR:H/UI:N/S:C/C:N/I:H/A:N",
+              "V3Score": 6.8
+            },
+            "nvd": {
+              "V3Vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:N/I:H/A:N",
+              "V3Score": 7.5
+            },
+            "redhat": {
+              "V3Vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:N/I:H/A:N",
+              "V3Score": 7.5
+            }
+          },
+          "References": [
+            "https://access.redhat.com/security/cve/CVE-2022-23491",
+            "https://cve.mitre.org/cgi-bin/cvename.cgi?name=CVE-2022-23491",
+            "https://github.com/advisories/GHSA-43fp-rhv2-5gv8",
+            "https://github.com/certifi/python-certifi/commit/9e9e840925d7b8e76c76fdac1fab7e6e88c1c3b8",
+            "https://github.com/certifi/python-certifi/security/advisories/GHSA-43fp-rhv2-5gv8",
+            "https://groups.google.com/a/mozilla.org/g/dev-security-policy/c/oxX69KFvsm4/m/yLohoVqtCgAJ",
+            "https://nvd.nist.gov/vuln/detail/CVE-2022-23491",
+            "https://ubuntu.com/security/notices/USN-5761-1",
+            "https://ubuntu.com/security/notices/USN-5761-2",
+            "https://www.cve.org/CVERecord?id=CVE-2022-23491"
+          ],
+          "PublishedDate": "2022-12-07T22:15:00Z",
+          "LastModifiedDate": "2023-03-24T18:12:00Z"
+        },
+        {
+          "VulnerabilityID": "CVE-2023-0286",
+          "PkgName": "cryptography",
+          "PkgPath": "opt/miniconda/lib/python3.9/site-packages/cryptography-36.0.0.dist-info/METADATA",
+          "InstalledVersion": "36.0.0",
+          "FixedVersion": "39.0.1",
+          "Layer": {
+            "Digest": "sha256:23f68593019a21ddd1d90a315b058ee0b0c0ae193fba6fd7063ec5b01976ad38",
+            "DiffID": "sha256:97792bb7d43b398b093f304838ba6abe88e9f7f977814f039c46a42413eef949"
+          },
+          "SeveritySource": "ghsa",
+          "PrimaryURL": "https://avd.aquasec.com/nvd/cve-2023-0286",
+          "DataSource": {
+            "ID": "ghsa",
+            "Name": "GitHub Security Advisory Pip",
+            "URL": "https://github.com/advisories?query=type%3Areviewed+ecosystem%3Apip"
+          },
+          "Title": "X.400 address type confusion in X.509 GeneralName",
+          "Description": "There is a type confusion vulnerability relating to X.400 address processing inside an X.509 GeneralName. X.400 addresses were parsed as an ASN1_STRING but the public structure definition for GENERAL_NAME incorrectly specified the type of the x400Address field as ASN1_TYPE. This field is subsequently interpreted by the OpenSSL function GENERAL_NAME_cmp as an ASN1_TYPE rather than an ASN1_STRING. When CRL checking is enabled (i.e. the application sets the X509_V_FLAG_CRL_CHECK flag), this vulnerability may allow an attacker to pass arbitrary pointers to a memcmp call, enabling them to read memory contents or enact a denial of service. In most cases, the attack requires the attacker to provide both the certificate chain and CRL, neither of which need to have a valid signature. If the attacker only controls one of these inputs, the other input must already contain an X.400 address as a CRL distribution point, which is uncommon. As such, this vulnerability is most likely to only affect applications which have implemented their own functionality for retrieving CRLs over a network.",
+          "Severity": "HIGH",
+          "CweIDs": [
+            "CWE-843"
+          ],
+          "CVSS": {
+            "ghsa": {
+              "V3Vector": "CVSS:3.1/AV:N/AC:H/PR:N/UI:N/S:U/C:H/I:N/A:H",
+              "V3Score": 7.4
+            },
+            "nvd": {
+              "V3Vector": "CVSS:3.1/AV:N/AC:H/PR:N/UI:N/S:U/C:H/I:N/A:H",
+              "V3Score": 7.4
+            },
+            "redhat": {
+              "V3Vector": "CVSS:3.1/AV:N/AC:H/PR:N/UI:N/S:U/C:H/I:N/A:H",
+              "V3Score": 7.4
+            }
+          },
+          "References": [
+            "https://access.redhat.com/errata/RHSA-2023:2165",
+            "https://access.redhat.com/security/cve/CVE-2023-0286",
+            "https://access.redhat.com/security/cve/cve-2023-0286",
+            "https://bugzilla.redhat.com/1960321",
+            "https://bugzilla.redhat.com/2164440",
+            "https://bugzilla.redhat.com/2164487",
+            "https://bugzilla.redhat.com/2164492",
+            "https://bugzilla.redhat.com/2164494",
+            "https://bugzilla.redhat.com/show_bug.cgi?id=2144000",
+            "https://bugzilla.redhat.com/show_bug.cgi?id=2144003",
+            "https://bugzilla.redhat.com/show_bug.cgi?id=2144006",
+            "https://bugzilla.redhat.com/show_bug.cgi?id=2144008",
+            "https://bugzilla.redhat.com/show_bug.cgi?id=2144010",
+            "https://bugzilla.redhat.com/show_bug.cgi?id=2144012",
+            "https://bugzilla.redhat.com/show_bug.cgi?id=2144015",
+            "https://bugzilla.redhat.com/show_bug.cgi?id=2144017",
+            "https://bugzilla.redhat.com/show_bug.cgi?id=2144019",
+            "https://bugzilla.redhat.com/show_bug.cgi?id=2145170",
+            "https://bugzilla.redhat.com/show_bug.cgi?id=2158412",
+            "https://bugzilla.redhat.com/show_bug.cgi?id=2164440",
+            "https://bugzilla.redhat.com/show_bug.cgi?id=2164487",
+            "https://bugzilla.redhat.com/show_bug.cgi?id=2164488",
+            "https://bugzilla.redhat.com/show_bug.cgi?id=2164492",
+            "https://bugzilla.redhat.com/show_bug.cgi?id=2164494",
+            "https://bugzilla.redhat.com/show_bug.cgi?id=2164497",
+            "https://bugzilla.redhat.com/show_bug.cgi?id=2164499",
+            "https://bugzilla.redhat.com/show_bug.cgi?id=2164500",
+            "https://cve.mitre.org/cgi-bin/cvename.cgi?name=CVE-2022-4203",
+            "https://cve.mitre.org/cgi-bin/cvename.cgi?name=CVE-2022-4304",
+            "https://cve.mitre.org/cgi-bin/cvename.cgi?name=CVE-2022-4450",
+            "https://cve.mitre.org/cgi-bin/cvename.cgi?name=CVE-2023-0215",
+            "https://cve.mitre.org/cgi-bin/cvename.cgi?name=CVE-2023-0216",
+            "https://cve.mitre.org/cgi-bin/cvename.cgi?name=CVE-2023-0217",
+            "https://cve.mitre.org/cgi-bin/cvename.cgi?name=CVE-2023-0286",
+            "https://cve.mitre.org/cgi-bin/cvename.cgi?name=CVE-2023-0401",
+            "https://errata.almalinux.org/9/ALSA-2023-2165.html",
+            "https://errata.rockylinux.org/RLSA-2023:0946",
+            "https://ftp.openbsd.org/pub/OpenBSD/LibreSSL/libressl-3.6.2-relnotes.txt",
+            "https://ftp.openbsd.org/pub/OpenBSD/patches/7.2/common/018_x509.patch.sig",
+            "https://git.openssl.org/gitweb/?p=openssl.git;a=commitdiff;h=2c6c9d439b484e1ba9830d8454a34fa4f80fdfe9",
+            "https://git.openssl.org/gitweb/?p=openssl.git;a=commitdiff;h=2f7530077e0ef79d98718138716bc51ca0cad658",
+            "https://git.openssl.org/gitweb/?p=openssl.git;a=commitdiff;h=fd2af07dc083a350c959147097003a14a5e8ac4d",
+            "https://github.com/advisories/GHSA-x4qr-2fvf-3mr5",
+            "https://github.com/pyca/cryptography/security/advisories/GHSA-x4qr-2fvf-3mr5",
+            "https://linux.oracle.com/cve/CVE-2023-0286.html",
+            "https://linux.oracle.com/errata/ELSA-2023-2165.html",
+            "https://nvd.nist.gov/vuln/detail/CVE-2023-0286",
+            "https://rustsec.org/advisories/RUSTSEC-2023-0006.html",
+            "https://ubuntu.com/security/notices/USN-5844-1",
+            "https://ubuntu.com/security/notices/USN-5845-1",
+            "https://ubuntu.com/security/notices/USN-5845-2",
+            "https://www.cve.org/CVERecord?id=CVE-2023-0286",
+            "https://www.openssl.org/news/secadv/20230207.txt"
+          ],
+          "PublishedDate": "2023-02-08T20:15:00Z",
+          "LastModifiedDate": "2023-03-27T19:15:00Z"
+        },
+        {
+          "VulnerabilityID": "CVE-2023-23931",
+          "PkgName": "cryptography",
+          "PkgPath": "opt/miniconda/lib/python3.9/site-packages/cryptography-36.0.0.dist-info/METADATA",
+          "InstalledVersion": "36.0.0",
+          "FixedVersion": "39.0.1",
+          "Layer": {
+            "Digest": "sha256:23f68593019a21ddd1d90a315b058ee0b0c0ae193fba6fd7063ec5b01976ad38",
+            "DiffID": "sha256:97792bb7d43b398b093f304838ba6abe88e9f7f977814f039c46a42413eef949"
+          },
+          "SeveritySource": "ghsa",
+          "PrimaryURL": "https://avd.aquasec.com/nvd/cve-2023-23931",
+          "DataSource": {
+            "ID": "ghsa",
+            "Name": "GitHub Security Advisory Pip",
+            "URL": "https://github.com/advisories?query=type%3Areviewed+ecosystem%3Apip"
+          },
+          "Title": "memory corruption via immutable objects",
+          "Description": "cryptography is a package designed to expose cryptographic primitives and recipes to Python developers. In affected versions `Cipher.update_into` would accept Python objects which implement the buffer protocol, but provide only immutable buffers. This would allow immutable objects (such as `bytes`) to be mutated, thus violating fundamental rules of Python and resulting in corrupted output. This now correctly raises an exception. This issue has been present since `update_into` was originally introduced in cryptography 1.8.",
+          "Severity": "MEDIUM",
+          "CweIDs": [
+            "CWE-754"
+          ],
+          "CVSS": {
+            "ghsa": {
+              "V3Vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:N/I:L/A:L",
+              "V3Score": 6.5
+            },
+            "nvd": {
+              "V3Vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:N/I:L/A:L",
+              "V3Score": 6.5
+            },
+            "redhat": {
+              "V3Vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:N/I:L/A:L",
+              "V3Score": 6.5
+            }
+          },
+          "References": [
+            "https://access.redhat.com/security/cve/CVE-2023-23931",
+            "https://cve.mitre.org/cgi-bin/cvename.cgi?name=CVE-2023-23931",
+            "https://github.com/advisories/GHSA-w7pp-m8wf-vj6r",
+            "https://github.com/pyca/cryptography/pull/8230/commits/94a50a9731f35405f0357fa5f3b177d46a726ab3",
+            "https://github.com/pyca/cryptography/security/advisories/GHSA-w7pp-m8wf-vj6r",
+            "https://nvd.nist.gov/vuln/detail/CVE-2023-23931",
+            "https://www.cve.org/CVERecord?id=CVE-2023-23931"
+          ],
+          "PublishedDate": "2023-02-07T21:15:00Z",
+          "LastModifiedDate": "2023-02-16T16:57:00Z"
+        },
+        {
+          "VulnerabilityID": "CVE-2022-40897",
+          "PkgName": "setuptools",
+          "PkgPath": "opt/miniconda/lib/python3.9/site-packages/setuptools-58.0.4-py3.9.egg-info/PKG-INFO",
+          "InstalledVersion": "58.0.4",
+          "FixedVersion": "65.5.1",
+          "Layer": {
+            "Digest": "sha256:23f68593019a21ddd1d90a315b058ee0b0c0ae193fba6fd7063ec5b01976ad38",
+            "DiffID": "sha256:97792bb7d43b398b093f304838ba6abe88e9f7f977814f039c46a42413eef949"
+          },
+          "SeveritySource": "nvd",
+          "PrimaryURL": "https://avd.aquasec.com/nvd/cve-2022-40897",
+          "DataSource": {
+            "ID": "osv",
+            "Name": "Python Packaging Advisory Database",
+            "URL": "https://github.com/pypa/advisory-db"
+          },
+          "Title": "Regular Expression Denial of Service (ReDoS) in package_index.py",
+          "Description": "Python Packaging Authority (PyPA) setuptools before 65.5.1 allows remote attackers to cause a denial of service via HTML in a crafted package or custom PackageIndex page. There is a Regular Expression Denial of Service (ReDoS) in package_index.py.",
+          "Severity": "MEDIUM",
+          "CVSS": {
+            "ghsa": {
+              "V3Vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:N/I:N/A:H",
+              "V3Score": 7.5
+            },
+            "nvd": {
+              "V3Vector": "CVSS:3.1/AV:N/AC:H/PR:N/UI:N/S:U/C:N/I:N/A:H",
+              "V3Score": 5.9
+            },
+            "redhat": {
+              "V3Vector": "CVSS:3.1/AV:N/AC:H/PR:N/UI:N/S:U/C:N/I:N/A:H",
+              "V3Score": 5.9
+            }
+          },
+          "References": [
+            "https://access.redhat.com/errata/RHSA-2023:0952",
+            "https://access.redhat.com/security/cve/CVE-2022-40897",
+            "https://bugzilla.redhat.com/2158559",
+            "https://bugzilla.redhat.com/show_bug.cgi?id=2158559",
+            "https://cve.mitre.org/cgi-bin/cvename.cgi?name=CVE-2022-40897",
+            "https://errata.almalinux.org/9/ALSA-2023-0952.html",
+            "https://errata.rockylinux.org/RLSA-2023:0952",
+            "https://github.com/advisories/GHSA-r9hx-vwmv-q579",
+            "https://github.com/pypa/setuptools/blob/fe8a98e696241487ba6ac9f91faa38ade939ec5d/setuptools/package_index.py#L200",
+            "https://github.com/pypa/setuptools/commit/43a9c9bfa6aa626ec2a22540bea28d2ca77964be",
+            "https://github.com/pypa/setuptools/compare/v65.5.0...v65.5.1",
+            "https://github.com/pypa/setuptools/issues/3659",
+            "https://linux.oracle.com/cve/CVE-2022-40897.html",
+            "https://linux.oracle.com/errata/ELSA-2023-0952.html",
+            "https://lists.fedoraproject.org/archives/list/package-announce@lists.fedoraproject.org/message/ADES3NLOE5QJKBLGNZNI2RGVOSQXA37R/",
+            "https://lists.fedoraproject.org/archives/list/package-announce@lists.fedoraproject.org/message/YNA2BAH2ACBZ4TVJZKFLCR7L23BG5C3H/",
+            "https://nvd.nist.gov/vuln/detail/CVE-2022-40897",
+            "https://pyup.io/posts/pyup-discovers-redos-vulnerabilities-in-top-python-packages/",
+            "https://pyup.io/vulnerabilities/CVE-2022-40897/52495/",
+            "https://security.netapp.com/advisory/ntap-20230214-0001/",
+            "https://setuptools.pypa.io/en/latest/",
+            "https://ubuntu.com/security/notices/USN-5817-1",
+            "https://www.cve.org/CVERecord?id=CVE-2022-40897"
+          ],
+          "PublishedDate": "2022-12-23T00:15:00Z",
+          "LastModifiedDate": "2023-05-01T06:15:00Z"
+        },
+        {
+          "VulnerabilityID": "CVE-2022-40898",
+          "PkgName": "wheel",
+          "PkgPath": "opt/miniconda/lib/python3.9/site-packages/wheel-0.37.1-py3.9.egg-info/PKG-INFO",
+          "InstalledVersion": "0.37.1",
+          "FixedVersion": "0.38.1",
+          "Layer": {
+            "Digest": "sha256:23f68593019a21ddd1d90a315b058ee0b0c0ae193fba6fd7063ec5b01976ad38",
+            "DiffID": "sha256:97792bb7d43b398b093f304838ba6abe88e9f7f977814f039c46a42413eef949"
+          },
+          "SeveritySource": "nvd",
+          "PrimaryURL": "https://avd.aquasec.com/nvd/cve-2022-40898",
+          "DataSource": {
+            "ID": "osv",
+            "Name": "Python Packaging Advisory Database",
+            "URL": "https://github.com/pypa/advisory-db"
+          },
+          "Title": "remote attackers can cause  denial of service via attacker controlled input to wheel cli",
+          "Description": "An issue discovered in Python Packaging Authority (PyPA) Wheel 0.37.1 and earlier allows remote attackers to cause a denial of service via attacker controlled input to wheel cli.",
+          "Severity": "HIGH",
+          "CVSS": {
+            "ghsa": {
+              "V3Vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:N/I:N/A:H",
+              "V3Score": 7.5
+            },
+            "nvd": {
+              "V3Vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:N/I:N/A:H",
+              "V3Score": 7.5
+            },
+            "redhat": {
+              "V3Vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:N/I:N/A:H",
+              "V3Score": 7.5
+            }
+          },
+          "References": [
+            "https://access.redhat.com/security/cve/CVE-2022-40898",
+            "https://cve.mitre.org/cgi-bin/cvename.cgi?name=CVE-2022-40898",
+            "https://github.com/advisories/GHSA-qwmp-2cf2-g9g6",
+            "https://github.com/pypa/wheel/blob/main/src/wheel/wheelfile.py#L18",
+            "https://github.com/pypa/wheel/commit/88f02bc335d5404991e532e7f3b0fc80437bf4e0",
+            "https://nvd.nist.gov/vuln/detail/CVE-2022-40898",
+            "https://pypi.org/project/wheel/",
+            "https://pyup.io/posts/pyup-discovers-redos-vulnerabilities-in-top-python-packages/",
+            "https://pyup.io/vulnerabilities/CVE-2022-40898/51499/",
+            "https://ubuntu.com/security/notices/USN-5821-1",
+            "https://ubuntu.com/security/notices/USN-5821-2",
+            "https://www.cve.org/CVERecord?id=CVE-2022-40898"
+          ],
+          "PublishedDate": "2022-12-23T00:15:00Z",
+          "LastModifiedDate": "2022-12-30T22:15:00Z"
+        }
+      ]
+    }
+  ]
+}
