@@ -23,6 +23,7 @@ require (
 	github.com/spf13/viper v1.15.0
 	github.com/stretchr/testify v1.8.2
 	golang.org/x/sync v0.2.0
+	sigs.k8s.io/release-utils v0.7.4
 )
 
 require (
@@ -31,6 +32,7 @@ require (
 	github.com/antchfx/xpath v1.2.3 // indirect
 	github.com/aquasecurity/trivy-db v0.0.0-20230116084806-4bcdf1c414d0 // indirect
 	github.com/caarlos0/env/v6 v6.10.1 // indirect
+	github.com/common-nighthawk/go-figure v0.0.0-20210622060536-734e95fb86be // indirect
 	github.com/containerd/continuity v0.3.0 // indirect
 	github.com/containerd/ttrpc v1.2.2 // indirect
 	github.com/containerd/typeurl v1.0.2 // indirect
