@@ -10,6 +10,6 @@ clear
 
 # Put your stuff here
 pei "docker kill buildkitd"
-pei "docker rmi nginx:1.21.6-patched"
-pei "docker rmi nginx:1.21.6"
-pei "rm nginx.1.21.6.json"
+pei "docker rmi nginx:1.18.0-patched --force"
+pei "docker rmi nginx:1.18.0 --force"
+pei "rm nginx.1.18.0.json"
