@@ -1,0 +1,340 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Copacetic MCP Server Test Client</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            background: white;
+            border-radius: 8px;
+            padding: 20px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .status {
+            padding: 10px;
+            border-radius: 4px;
+            margin: 10px 0;
+        }
+        .status.connected {
+            background-color: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+        .status.disconnected {
+            background-color: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+        .tool-list {
+            margin: 20px 0;
+        }
+        .tool {
+            background: #f8f9fa;
+            border: 1px solid #dee2e6;
+            border-radius: 4px;
+            padding: 10px;
+            margin: 10px 0;
+        }
+        .tool h4 {
+            margin: 0 0 5px 0;
+            color: #495057;
+        }
+        .tool p {
+            margin: 0;
+            color: #6c757d;
+            font-size: 14px;
+        }
+        .test-section {
+            margin: 20px 0;
+            padding: 15px;
+            background: #e9ecef;
+            border-radius: 4px;
+        }
+        button {
+            background: #007bff;
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 4px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        button:hover {
+            background: #0056b3;
+        }
+        button:disabled {
+            background: #6c757d;
+            cursor: not-allowed;
+        }
+        .log {
+            background: #343a40;
+            color: #f8f9fa;
+            padding: 10px;
+            border-radius: 4px;
+            font-family: monospace;
+            font-size: 12px;
+            max-height: 300px;
+            overflow-y: auto;
+            white-space: pre-wrap;
+        }
+        input, select {
+            padding: 8px;
+            border: 1px solid #ced4da;
+            border-radius: 4px;
+            margin: 5px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Copacetic MCP Server Test Client</h1>
+
+        <div id="status" class="status disconnected">
+            Disconnected
+        </div>
+
+        <div class="test-section">
+            <h3>Connection</h3>
+            <button id="connect-btn" onclick="connectToServer()">Connect</button>
+            <button id="disconnect-btn" onclick="disconnectFromServer()" disabled>Disconnect</button>
+            <button onclick="pingServer()">Ping</button>
+        </div>
+
+        <div class="test-section">
+            <h3>Image Scanning</h3>
+            <input type="text" id="scan-image" placeholder="Image name (e.g., nginx:latest)" value="nginx:latest">
+            <select id="scan-format">
+                <option value="json">JSON</option>
+                <option value="sarif">SARIF</option>
+                <option value="cyclonedx">CycloneDX</option>
+                <option value="spdx">SPDX</option>
+            </select>
+            <button onclick="scanImage()">Scan Image (Trivy)</button>
+        </div>
+
+        <div class="test-section">
+            <h3>Image Remediation</h3>
+            <input type="text" id="remediate-image" placeholder="Image to remediate" value="nginx:latest">
+            <input type="text" id="output-image" placeholder="Output image name" value="nginx:latest-patched">
+            <select id="patch-strategy">
+                <option value="auto">Auto</option>
+                <option value="conservative">Conservative</option>
+                <option value="manual">Manual</option>
+            </select>
+            <button onclick="triggerRemediation()">Trigger Remediation</button>
+        </div>
+
+        <div id="tools" class="tool-list">
+            <h3>Available Tools</h3>
+            <p>Connect to server to see available tools...</p>
+        </div>
+
+        <div class="test-section">
+            <h3>Server Log</h3>
+            <button onclick="clearLog()">Clear Log</button>
+            <div id="log" class="log"></div>
+        </div>
+    </div>
+
+    <script>
+        let eventSource = null;
+        let sessionId = null;
+        let messageId = 1;
+
+        function log(message) {
+            const logElement = document.getElementById('log');
+            const timestamp = new Date().toISOString();
+            logElement.textContent += `[${timestamp}] ${message}\n`;
+            logElement.scrollTop = logElement.scrollHeight;
+        }
+
+        function clearLog() {
+            document.getElementById('log').textContent = '';
+        }
+
+        function updateStatus(connected) {
+            const statusElement = document.getElementById('status');
+            const connectBtn = document.getElementById('connect-btn');
+            const disconnectBtn = document.getElementById('disconnect-btn');
+
+            if (connected) {
+                statusElement.textContent = `Connected (Session: ${sessionId})`;
+                statusElement.className = 'status connected';
+                connectBtn.disabled = true;
+                disconnectBtn.disabled = false;
+            } else {
+                statusElement.textContent = 'Disconnected';
+                statusElement.className = 'status disconnected';
+                connectBtn.disabled = false;
+                disconnectBtn.disabled = true;
+            }
+        }
+
+        async function connectToServer() {
+            try {
+                log('Connecting to server...');
+
+                // Establish SSE connection
+                eventSource = new EventSource('http://localhost:3000/sse');
+
+                eventSource.onopen = () => {
+                    log('SSE connection established');
+
+                    // Extract session ID from response headers (if available)
+                    // For now, we'll generate a temporary one
+                    sessionId = 'session-' + Math.random().toString(36).substr(2, 9);
+                    updateStatus(true);
+
+                    // List available tools
+                    listTools();
+                };
+
+                eventSource.onmessage = (event) => {
+                    try {
+                        const data = JSON.parse(event.data);
+                        log(`Received: ${JSON.stringify(data, null, 2)}`);
+
+                        // Handle different message types
+                        if (data.result && data.result.tools) {
+                            displayTools(data.result.tools);
+                        }
+                    } catch (error) {
+                        log(`Error parsing message: ${error.message}`);
+                    }
+                };
+
+                eventSource.onerror = (error) => {
+                    log(`SSE Error: ${error}`);
+                    updateStatus(false);
+                };
+
+            } catch (error) {
+                log(`Connection error: ${error.message}`);
+                updateStatus(false);
+            }
+        }
+
+        function disconnectFromServer() {
+            if (eventSource) {
+                eventSource.close();
+                eventSource = null;
+            }
+            sessionId = null;
+            updateStatus(false);
+            log('Disconnected from server');
+        }
+
+        async function sendMessage(message) {
+            if (!sessionId) {
+                log('Error: Not connected to server');
+                return;
+            }
+
+            try {
+                const response = await fetch('http://localhost:3000/message', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-MCP-Session-ID': sessionId
+                    },
+                    body: JSON.stringify(message)
+                });
+
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+
+                log(`Sent: ${JSON.stringify(message, null, 2)}`);
+            } catch (error) {
+                log(`Send error: ${error.message}`);
+            }
+        }
+
+        async function listTools() {
+            await sendMessage({
+                jsonrpc: "2.0",
+                id: messageId++,
+                method: "tools/list",
+                params: {}
+            });
+        }
+
+        async function pingServer() {
+            await sendMessage({
+                jsonrpc: "2.0",
+                id: messageId++,
+                method: "tools/call",
+                params: {
+                    name: "ping",
+                    arguments: {}
+                }
+            });
+        }
+
+        async function scanImage() {
+            const image = document.getElementById('scan-image').value;
+            const format = document.getElementById('scan-format').value;
+
+            await sendMessage({
+                jsonrpc: "2.0",
+                id: messageId++,
+                method: "tools/call",
+                params: {
+                    name: "scan_image",
+                    arguments: {
+                        image: image,
+                        format: format
+                    }
+                }
+            });
+        }
+
+        async function triggerRemediation() {
+            const image = document.getElementById('remediate-image').value;
+            const outputImage = document.getElementById('output-image').value;
+            const patchStrategy = document.getElementById('patch-strategy').value;
+
+            await sendMessage({
+                jsonrpc: "2.0",
+                id: messageId++,
+                method: "tools/call",
+                params: {
+                    name: "trigger_remediation",
+                    arguments: {
+                        image: image,
+                        output_image: outputImage,
+                        patch_strategy: patchStrategy
+                    }
+                }
+            });
+        }
+
+        function displayTools(tools) {
+            const toolsElement = document.getElementById('tools');
+            let html = '<h3>Available Tools</h3>';
+
+            tools.forEach(tool => {
+                html += `
+                    <div class="tool">
+                        <h4>${tool.name}</h4>
+                        <p>${tool.description}</p>
+                    </div>
+                `;
+            });
+
+            toolsElement.innerHTML = html;
+        }
+
+        // Initialize
+        log('Test client loaded. Click Connect to start.');
+    </script>
+</body>
+</html>

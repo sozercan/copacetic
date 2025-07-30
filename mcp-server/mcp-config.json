@@ -1,0 +1,9 @@
+{
+  "mcpServers": {
+    "copacetic": {
+      "command": "node",
+      "args": ["./dist/index.js"],
+      "cwd": "/path/to/copacetic/mcp-server"
+    }
+  }
+}

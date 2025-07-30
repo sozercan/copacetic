@@ -1,0 +1,43 @@
+services:
+  copacetic-mcp-server:
+    build: .
+    container_name: copacetic-mcp-server
+    ports:
+      - "3000:3000"
+    volumes:
+      # Mount Docker socket for image operations
+      - /var/run/docker.sock:/var/run/docker.sock
+      # Persistent storage for scan results and reports
+      - ./data/scan-results:/app/scan-results
+      - ./data/patching-workspace:/app/patching-workspace
+      - ./data/reports:/app/reports
+      # Registry credentials (create this file with proper permissions)
+      - ./data/registry-credentials.json:/app/registry-credentials.json
+    environment:
+      - NODE_ENV=production
+      - LOG_LEVEL=info
+      - PORT=3000
+      - HOST=0.0.0.0
+    restart: unless-stopped
+    networks:
+      - mcp-network
+
+  # Optional: Buildkit service for advanced image building
+  buildkit:
+    image: moby/buildkit:latest
+    container_name: copacetic-buildkit
+    privileged: true
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+    networks:
+      - mcp-network
+    restart: unless-stopped
+
+networks:
+  mcp-network:
+    driver: bridge
+
+volumes:
+  scan-results:
+  patching-workspace:
+  reports:
