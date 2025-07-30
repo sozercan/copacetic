@@ -6,7 +6,7 @@ import { v4 as uuidv4 } from "uuid";
 export interface RemediationRequest {
   image: string;
   scanReport?: string;
-  outputImage: string;
+  outputTag: string; // Changed from outputImage to outputTag
   registryCredentials?: string;
   patchStrategy: "auto" | "manual" | "conservative";
 }
@@ -52,15 +52,41 @@ export class ImagePatcher {
   }
 
   private findCopaExecutable(): string {
-    // Try to find copa executable in the parent copacetic project
+    // Try to find copa executable in common locations
     const possiblePaths = [
+      "/usr/local/bin/copa",
+      "/usr/bin/copa",
       path.join(process.cwd(), "..", "copa"),
       path.join(process.cwd(), "..", "bin", "copa"),
-      "/usr/local/bin/copa",
       "copa", // assume it's in PATH
     ];
 
-    return possiblePaths[0]; // For now, assume it's available
+    // Check each path to see if the executable exists
+    const { execSync } = require('child_process');
+
+    // First try using 'which' to find copa in PATH
+    try {
+      const whichResult = execSync('which copa', { encoding: 'utf8' }).trim();
+      if (whichResult) {
+        return whichResult;
+      }
+    } catch (error) {
+      // which failed, continue with manual checking
+    }
+
+    // Fall back to checking known paths
+    const fs = require('fs');
+    for (const possiblePath of possiblePaths) {
+      try {
+        fs.accessSync(possiblePath, fs.constants.F_OK | fs.constants.X_OK);
+        return possiblePath;
+      } catch (error) {
+        // Path doesn't exist or not executable, continue
+      }
+    }
+
+    // If nothing found, default to 'copa' and let PATH resolution handle it
+    return "copa";
   }
 
   private async ensureDirectoryExists() {
@@ -78,32 +104,65 @@ export class ImagePatcher {
     try {
       await fs.mkdir(workspaceDir, { recursive: true });
 
-      // Step 1: Pull the original image (if needed)
-      await this.pullImage(request.image);
+      console.log(`[${new Date().toISOString()}] REMEDIATION PROGRESS: Starting remediation process`);
+      console.log(`[${new Date().toISOString()}] REMEDIATION PROGRESS: Created workspace directory: ${workspaceDir}`);
 
-      // Step 2: Generate or use existing scan report
+      // Step 1: Pull the original image (if needed)
+      console.log(`[${new Date().toISOString()}] REMEDIATION PROGRESS: Pulling image ${request.image}`);
+      await this.pullImage(request.image);
+      console.log(`[${new Date().toISOString()}] REMEDIATION PROGRESS: Image pull completed`);
+
+      // Step 2: Use provided scan report or run in comprehensive update mode
       let scanReportPath = request.scanReport;
+      let useComprehensiveMode = false;
+
       if (!scanReportPath) {
-        scanReportPath = await this.generateScanReport(request.image, workspaceDir);
+        // No scan report provided - use comprehensive update mode
+        // Copa will update all packages without requiring Trivy scan
+        useComprehensiveMode = true;
+        console.log(`[${new Date().toISOString()}] REMEDIATION: Using comprehensive update mode (no scan report provided)`);
+      } else {
+        console.log(`[${new Date().toISOString()}] REMEDIATION: Using provided scan report: ${scanReportPath}`);
       }
 
+      console.log(`[${new Date().toISOString()}] REMEDIATION PROGRESS: Starting Copa patching operation`);
+      
       // Step 3: Run copa to patch the image
       const patchResult = await this.runCopa({
         image: request.image,
-        scanReport: scanReportPath,
-        outputImage: request.outputImage,
+        scanReport: scanReportPath, // Will be undefined for comprehensive mode
+        outputTag: request.outputTag,
         workspaceDir,
         strategy: request.patchStrategy,
+        comprehensiveMode: useComprehensiveMode,
       });
 
+      console.log(`[${new Date().toISOString()}] REMEDIATION PROGRESS: Copa patching completed successfully`);
+
       // Step 4: Parse results and generate summary
+      console.log(`[${new Date().toISOString()}] REMEDIATION PROGRESS: Parsing patch results`);
       const patchesApplied = await this.parsePatchResults(workspaceDir);
-      const summary = this.generateRemediationSummary(patchesApplied);
+      const summary = this.generateRemediationSummary(patchesApplied, useComprehensiveMode);
+
+      // Construct the full output image name for the result
+      // outputTag should now be the full tag (e.g., "1.27.0-patched")
+      let outputImageName: string;
+      const originalColonIndex = request.image.lastIndexOf(':');
+      
+      if (originalColonIndex !== -1) {
+        // Replace the original tag with the new tag
+        outputImageName = request.image.substring(0, originalColonIndex + 1) + request.outputTag;
+      } else {
+        // No tag in original image, append new tag
+        outputImageName = `${request.image}:${request.outputTag}`;
+      }
+
+      console.log(`[${new Date().toISOString()}] REMEDIATION PROGRESS: Generated final output image name: ${outputImageName}`);
 
       const result: RemediationResult = {
         remediationId,
         originalImage: request.image,
-        patchedImage: request.outputImage,
+        patchedImage: outputImageName,
         patchesApplied,
         summary,
         buildLogs: patchResult.logs,
@@ -116,14 +175,21 @@ export class ImagePatcher {
         JSON.stringify(result, null, 2)
       );
 
+      console.log(`[${new Date().toISOString()}] REMEDIATION PROGRESS: Remediation completed successfully`);
+
       return result;
     } catch (error) {
+      console.log(`[${new Date().toISOString()}] REMEDIATION PROGRESS: Remediation failed with error: ${error instanceof Error ? error.message : String(error)}`);
       throw new Error(`Remediation failed: ${error instanceof Error ? error.message : String(error)}`);
     }
   }
 
   private async pullImage(image: string): Promise<void> {
-    return this.executeCommand("docker", ["pull", image]);
+    console.log(`[${new Date().toISOString()}] DOCKER PULL: Starting pull for ${image}`);
+    await this.executeCommandWithLogs("docker", ["pull", image], (log) => {
+      console.log(`[${new Date().toISOString()}] DOCKER PULL: ${log.trim()}`);
+    });
+    console.log(`[${new Date().toISOString()}] DOCKER PULL: Pull completed for ${image}`);
   }
 
   private async generateScanReport(image: string, workspaceDir: string): Promise<string> {
@@ -141,18 +207,24 @@ export class ImagePatcher {
 
   private async runCopa(options: {
     image: string;
-    scanReport: string;
-    outputImage: string;
+    scanReport?: string; // Made optional for comprehensive mode
+    outputTag: string;
     workspaceDir: string;
     strategy: string;
+    comprehensiveMode?: boolean;
   }): Promise<{ logs: string[] }> {
     const args = [
       "patch",
       "-i", options.image,
-      "-r", options.scanReport,
-      "-t", options.outputImage,
-      "--addr", "docker-container://buildkit",
+      "-t", options.outputTag, // Now just the tag part
+      "--loader", "docker",
+      "--platform", "linux/arm64", // Target only current platform to avoid emulation issues
     ];
+
+    // Only add scan report if provided (for targeted patching)
+    if (options.scanReport) {
+      args.push("-r", options.scanReport);
+    }
 
     // Add strategy-specific flags
     if (options.strategy === "conservative") {
@@ -161,8 +233,21 @@ export class ImagePatcher {
 
     const logs: string[] = [];
 
+    // Log the exact Copa command being executed
+    console.log(`[${new Date().toISOString()}] COPA COMMAND: ${this.copaPath} ${args.join(' ')}`);
+    console.log(`[${new Date().toISOString()}] COPA INPUT IMAGE: ${options.image}`);
+    console.log(`[${new Date().toISOString()}] COPA OUTPUT TAG: ${options.outputTag}`);
+    console.log(`[${new Date().toISOString()}] COPA PLATFORM: linux/arm64 (single platform to avoid emulation issues)`);
+    if (options.comprehensiveMode) {
+      console.log(`[${new Date().toISOString()}] COPA MODE: Comprehensive update (all packages)`);
+    } else {
+      console.log(`[${new Date().toISOString()}] COPA MODE: Targeted patching with scan report`);
+    }
+
     await this.executeCommandWithLogs(this.copaPath, args, (log) => {
       logs.push(log);
+      // Stream logs in real-time to console with timestamp
+      console.log(`[${new Date().toISOString()}] COPA OUTPUT: ${log.trim()}`);
     });
 
     return { logs };
@@ -190,7 +275,7 @@ export class ImagePatcher {
     return patches;
   }
 
-  private generateRemediationSummary(patches: PatchInfo[]): RemediationSummary {
+  private generateRemediationSummary(patches: PatchInfo[], comprehensiveMode: boolean = false): RemediationSummary {
     const summary: RemediationSummary = {
       totalVulnerabilitiesFound: 0,
       vulnerabilitiesFixed: 0,
@@ -208,12 +293,27 @@ export class ImagePatcher {
       summary.vulnerabilitiesFixed += patch.vulnerabilitiesFixed.length;
     }
 
+    // In comprehensive mode, we assume we're upgrading all packages for security
+    // but don't have specific vulnerability counts
+    if (comprehensiveMode && patches.length === 0) {
+      // If no specific patch info is available but we ran comprehensive mode,
+      // provide a reasonable summary indicating the mode was used
+      summary.packagesUpgraded = -1; // Indicates unknown number of packages upgraded
+      summary.patchesApplied = -1; // Indicates comprehensive mode was used
+    }
+
     return summary;
   }
 
   private async executeCommand(command: string, args: string[]): Promise<void> {
     return new Promise((resolve, reject) => {
       const process = spawn(command, args, { stdio: "pipe" });
+
+      // Set up timeout (10 minutes for regular commands)
+      const timeout = setTimeout(() => {
+        process.kill('SIGKILL');
+        reject(new Error(`Command timed out after 10 minutes: ${command} ${args.join(' ')}`));
+      }, 600000); // 10 minutes
 
       let stderr = "";
 
@@ -222,6 +322,7 @@ export class ImagePatcher {
       });
 
       process.on("close", (code: any) => {
+        clearTimeout(timeout);
         if (code === 0) {
           resolve();
         } else {
@@ -230,6 +331,7 @@ export class ImagePatcher {
       });
 
       process.on("error", (error: any) => {
+        clearTimeout(timeout);
         reject(error);
       });
     });
@@ -242,6 +344,12 @@ export class ImagePatcher {
   ): Promise<void> {
     return new Promise((resolve, reject) => {
       const process = spawn(command, args, { stdio: "pipe" });
+
+      // Set up timeout (15 minutes for Copa operations)
+      const timeout = setTimeout(() => {
+        process.kill('SIGKILL');
+        reject(new Error(`Command timed out after 15 minutes: ${command} ${args.join(' ')}`));
+      }, 900000); // 15 minutes
 
       let stderr = "";
 
@@ -257,6 +365,7 @@ export class ImagePatcher {
       });
 
       process.on("close", (code: any) => {
+        clearTimeout(timeout);
         if (code === 0) {
           resolve();
         } else {
@@ -265,6 +374,7 @@ export class ImagePatcher {
       });
 
       process.on("error", (error: any) => {
+        clearTimeout(timeout);
         reject(error);
       });
     });

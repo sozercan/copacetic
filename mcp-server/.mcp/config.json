@@ -1,0 +1,33 @@
+{
+  "mcpVersion": "1.17.0",
+  "servers": {
+    "copacetic": {
+      "name": "Copacetic Container Security",
+      "description": "Container vulnerability scanning and remediation using Trivy and Copacetic",
+      "transport": "sse",
+      "endpoint": "http://localhost:3000/sse",
+      "capabilities": {
+        "tools": true,
+        "resources": false,
+        "prompts": false
+      },
+      "environment": {
+        "NODE_ENV": "production"
+      },
+      "metadata": {
+        "category": "security",
+        "tags": ["containers", "vulnerabilities", "scanning", "patching"],
+        "version": "1.0.0",
+        "author": "Copacetic Team"
+      }
+    }
+  },
+  "client": {
+    "name": "vscode-mcp-client",
+    "version": "1.0.0",
+    "capabilities": {
+      "sampling": false,
+      "notifications": true
+    }
+  }
+}

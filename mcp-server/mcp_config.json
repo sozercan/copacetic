@@ -1,0 +1,11 @@
+{
+  "mcpServers": {
+    "copa-mcp": {
+      "command": "node",
+      "args": ["/Users/sozercan/go/src/github.com/project-copacetic/copacetic/mcp-server/dist/stdio-server.js"],
+      "env": {
+        "PATH": "/usr/local/bin:/usr/bin:/bin"
+      }
+    }
+  }
+}

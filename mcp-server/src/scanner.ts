@@ -99,6 +99,12 @@ export class VulnerabilityScanner {
     return new Promise((resolve, reject) => {
       const process = spawn(command, args, { stdio: "pipe" });
 
+      // Set up timeout (10 minutes for long scans)
+      const timeout = setTimeout(() => {
+        process.kill('SIGKILL');
+        reject(new Error(`Command timed out after 10 minutes: ${command} ${args.join(' ')}`));
+      }, 600000); // 10 minutes
+
       let stdout = "";
       let stderr = "";
 
@@ -111,6 +117,7 @@ export class VulnerabilityScanner {
       });
 
       process.on("close", (code) => {
+        clearTimeout(timeout);
         if (code === 0) {
           resolve();
         } else {
@@ -119,6 +126,7 @@ export class VulnerabilityScanner {
       });
 
       process.on("error", (error) => {
+        clearTimeout(timeout);
         reject(error);
       });
     });
