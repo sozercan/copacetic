@@ -21,6 +21,7 @@ import (
 	"github.com/moby/buildkit/util/progress/progressui"
 	digest "github.com/opencontainers/go-digest"
 	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
+	openvex "github.com/openvex/go-vex/pkg/vex"
 	"github.com/project-copacetic/copacetic/pkg/buildkit"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -581,6 +582,79 @@ func TestOCILayoutRoundTrip(t *testing.T) {
 		assert.Equal(t, before, snapshot(t, input))
 		_, err := os.Stat(opts.OCIDir)
 		assert.True(t, os.IsNotExist(err))
+	})
+
+	t.Run("descriptor-only OS version survives platform preservation", func(t *testing.T) {
+		preservedPlatform := ocispec.Platform{OS: linuxOS, Architecture: "386", OSVersion: "fixture.1"}
+		for _, failed := range []bool{false, true} {
+			t.Run(fmt.Sprintf("ignored failure=%v", failed), func(t *testing.T) {
+				sibling := images["386"]
+				config, err := sibling.ConfigFile()
+				require.NoError(t, err)
+				require.Empty(t, config.OSVersion, "only the descriptor should declare an OS version")
+				if failed {
+					sibling, err = mutate.AppendLayers(sibling, static.NewLayer([]byte("not a tar archive"), v1types.OCIUncompressedLayer))
+					require.NoError(t, err)
+				}
+				input := writeLayout(t, map[string]v1.Image{amd64Arch: images[amd64Arch], "386": sibling}, true, false)
+				indexPath := filepath.Join(input, ocispec.ImageIndexFile)
+				data, err := os.ReadFile(indexPath)
+				require.NoError(t, err)
+				var root, index ocispec.Index
+				require.NoError(t, json.Unmarshal(data, &root))
+				readJSONBlob(t, input, &root.Manifests[0], &index)
+				for i := range index.Manifests {
+					if index.Manifests[i].Platform.Architecture == "386" {
+						index.Manifests[i].Platform = &preservedPlatform
+					}
+				}
+				data, err = json.Marshal(index)
+				require.NoError(t, err)
+				root.Manifests[0].Digest = digest.FromBytes(data)
+				root.Manifests[0].Size = int64(len(data))
+				require.NoError(t, os.WriteFile(filepath.Join(input, "blobs", "sha256", root.Manifests[0].Digest.Encoded()), data, 0o600))
+				data, err = json.Marshal(root)
+				require.NoError(t, err)
+				require.NoError(t, os.WriteFile(indexPath, data, 0o600))
+				before := snapshot(t, input)
+
+				opts := options(input, filepath.Join(t.TempDir(), "output"))
+				opts.Output = filepath.Join(t.TempDir(), "vex.json")
+				if failed {
+					opts.Report, opts.IgnoreError = t.TempDir(), true
+					for _, arch := range []string{amd64Arch, "386"} {
+						require.NoError(t, os.Rename(writeReport(t, arch), filepath.Join(opts.Report, arch+".json")))
+					}
+				} else {
+					opts.Report, opts.Platforms = writeReport(t, amd64Arch), []string{"linux/amd64"}
+				}
+				require.NoError(t, patch.Patch(t.Context(), opts))
+				assert.Equal(t, before, snapshot(t, input))
+				assertPlatformPreserved(t, input, opts.OCIDir, &preservedPlatform)
+				output := openLayout(t, opts.OCIDir)
+				patched, err := output.PlatformDescriptor(t.Context(), &ocispec.Platform{OS: linuxOS, Architecture: amd64Arch})
+				require.NoError(t, err)
+				preserved, err := output.PlatformDescriptor(t.Context(), &preservedPlatform)
+				require.NoError(t, err)
+				data, err = os.ReadFile(opts.Output)
+				require.NoError(t, err)
+				var document openvex.VEX
+				require.NoError(t, json.Unmarshal(data, &document))
+				require.NotEmpty(t, document.Statements)
+				id := document.ID
+				document.ID = ""
+				canonicalID, err := document.GenerateCanonicalID()
+				require.NoError(t, err)
+				assert.Equal(t, canonicalID, id)
+				for _, statement := range document.Statements {
+					require.NotEmpty(t, statement.Products)
+					for _, product := range statement.Products {
+						assert.True(t, strings.HasSuffix(product.ID, "@"+patched.Digest.String()), product.ID)
+						assert.NotContains(t, product.ID, preserved.Digest.String())
+					}
+				}
+			})
+		}
 	})
 
 	t.Run("ignored OCI failure preserves source without a VEX claim", func(t *testing.T) {
