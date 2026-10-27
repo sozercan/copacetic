@@ -7,6 +7,7 @@ import (
 	"os"
 	"path/filepath"
 	"testing"
+	"time"
 
 	openvex "github.com/openvex/go-vex/pkg/vex"
 	"github.com/stretchr/testify/require"
@@ -240,5 +241,54 @@ func TestTryOutputVexDocumentsKeepsPlatformSubjectsSeparate(t *testing.T) {
 	for i, statement := range document.Statements {
 		require.Len(t, statement.Products, 1)
 		require.Equal(t, "pkg:oci/"+inputs[i].Image, statement.Products[0].ID)
+	}
+}
+
+func TestTryOutputVexDocumentsCanonicalIDIncludesAllStatements(t *testing.T) {
+	originalNow, originalGenerateID := now, generateID
+	t.Cleanup(func() {
+		now, generateID = originalNow, originalGenerateID
+	})
+	fixedTime := time.Date(2026, 10, 27, 12, 0, 0, 0, time.UTC)
+	now = func() time.Time { return fixedTime }
+	generateID = func(doc *openvex.VEX) (string, error) { return doc.GenerateCanonicalID() }
+
+	updates := &unversioned.UpdateManifest{
+		Metadata:  unversioned.Metadata{OS: unversioned.OS{Type: "alpine", Version: "3.21"}},
+		OSUpdates: unversioned.UpdatePackages{{Name: "busybox", InstalledVersion: "1", FixedVersion: "2", VulnerabilityID: "CVE-2025-46394"}},
+	}
+	first := DocumentInput{Updates: updates, PackageType: "apk", Image: "registry.invalid/output@sha256:aaa"}
+	second := DocumentInput{Updates: updates, PackageType: "apk", Image: "registry.invalid/output@sha256:bbb"}
+	changed := second
+	changed.Image = "registry.invalid/output@sha256:ccc"
+	ids := make(map[string]bool)
+	for _, test := range []struct {
+		name   string
+		inputs []DocumentInput
+	}{
+		{name: "single platform", inputs: []DocumentInput{first}},
+		{name: "additional platform", inputs: []DocumentInput{first, second}},
+		{name: "changed platform", inputs: []DocumentInput{first, changed}},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			file := filepath.Join(t.TempDir(), "vex.json")
+			require.NoError(t, TryOutputVexDocuments(test.inputs, "openvex", file))
+			data, err := os.ReadFile(file)
+			require.NoError(t, err)
+			var document openvex.VEX
+			require.NoError(t, json.Unmarshal(data, &document))
+			require.Len(t, document.Statements, len(test.inputs))
+			id := document.ID
+			document.ID = ""
+			expectedID, err := document.GenerateCanonicalID()
+			require.NoError(t, err)
+			require.Equal(t, expectedID, id, "the ID must describe the completed document")
+			require.False(t, ids[id], "different platform statements must have different IDs")
+			ids[id] = true
+			require.NoError(t, TryOutputVexDocuments(test.inputs, "openvex", file))
+			repeated, err := os.ReadFile(file)
+			require.NoError(t, err)
+			require.JSONEq(t, string(data), string(repeated), "identical inputs and timestamps must produce identical documents")
+		})
 	}
 }

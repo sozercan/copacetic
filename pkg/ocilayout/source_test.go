@@ -1081,6 +1081,7 @@ func TestOpenCombinesAnnotationSelectorMatches(t *testing.T) {
 		{name: "raw", selector: "stable", imageName: "stable", refName: "stable"},
 		{name: "full", selector: "example.com/app:stable", imageName: "example.com/app:stable", refName: "example.com/app:stable"},
 		{name: "normalized", selector: "alpine:stable", imageName: "docker.io/library/alpine:stable", refName: "alpine:stable"},
+		{name: "equivalent Docker Hub names", selector: "nginx:latest", imageName: "docker.io/nginx:latest", refName: "docker.io/library/nginx:latest"},
 		{name: "tag fallback", selector: "example.com/app:stable", imageName: "example.com/app:stable", refName: "stable"},
 	}
 	for _, test := range tests {

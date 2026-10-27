@@ -101,6 +101,8 @@ func TryOutputVexDocuments(inputs []DocumentInput, format, file string) error {
 	if combined == nil {
 		return nil
 	}
+	// The first document already has an ID; hash the completed statement set.
+	combined.ID = ""
 	id, err := combined.GenerateCanonicalID()
 	if err != nil {
 		return err

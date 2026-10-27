@@ -315,9 +315,7 @@ func (s *Source) selectDescriptor(ctx context.Context, descriptors []ocispec.Des
 		if isArtifactDescriptor(&desc) || (!isImageManifest(desc.MediaType) && !isImageIndex(desc.MediaType)) {
 			continue
 		}
-		var body struct {
-			ArtifactType string `json:"artifactType"`
-		}
+		var body ocispec.Manifest
 		err := s.readJSONBlob(ctx, &desc, &body)
 		if contextErr := ctx.Err(); contextErr != nil {
 			return ocispec.Descriptor{}, contextErr
@@ -325,7 +323,7 @@ func (s *Source) selectDescriptor(ctx context.Context, descriptors []ocispec.Des
 		// Only a verified body can establish an artifact. Keep unreadable or
 		// corrupt descriptors as candidates so their validation remains scoped
 		// to selection and cannot silently hide an ambiguous image.
-		if err == nil && body.ArtifactType != "" {
+		if err == nil && isArtifactManifest(&body) {
 			continue
 		}
 		candidates = append(candidates, desc)
@@ -367,11 +365,23 @@ func (s *Source) selectDescriptor(ctx context.Context, descriptors []ocispec.Des
 	matches := descriptorsMatching(candidates, func(desc ocispec.Descriptor) bool {
 		imageName := desc.Annotations[annotationImageName]
 		refName := desc.Annotations[ocispec.AnnotationRefName]
-		// Count exact matches across both annotation keys, but do not let a
-		// bare ref-name tag select a different explicitly named repository.
+		// Match full references canonically across both annotation keys. Bare
+		// ref-name tags stay literal and use the repository-scoped fallback below.
 		if (imageName != "" && slices.Contains(names, imageName)) ||
 			(refName != "" && slices.Contains(names, refName)) {
 			return true
+		}
+		if named != nil {
+			for _, key := range []string{annotationImageName, ocispec.AnnotationRefName} {
+				value := desc.Annotations[key]
+				if value == "" || (key == ocispec.AnnotationRefName && !strings.ContainsAny(value, "/:@")) {
+					continue
+				}
+				annotated, err := reference.ParseNormalizedNamed(value)
+				if err == nil && annotated.String() == named.String() {
+					return true
+				}
+			}
 		}
 		if tag == "" || refName != tag {
 			return false
@@ -492,6 +502,13 @@ func isImageConfig(mediaType string) bool {
 // media type. The referenced manifest must still pass full image validation.
 func isArtifactDescriptor(desc *ocispec.Descriptor) bool {
 	return desc.ArtifactType != "" && (!isImageManifest(desc.MediaType) || !isImageConfig(desc.ArtifactType))
+}
+
+// Older artifacts may omit artifactType and identify their content through a
+// non-image config media type. A missing config type remains an invalid image,
+// not evidence that an unreadable or malformed image can be ignored.
+func isArtifactManifest(manifest *ocispec.Manifest) bool {
+	return manifest.ArtifactType != "" || (manifest.Config.MediaType != "" && !isImageConfig(manifest.Config.MediaType))
 }
 
 func isImageLayer(mediaType string) bool {
@@ -622,7 +639,7 @@ func (s *Source) imagePlatform(ctx context.Context, desc *ocispec.Descriptor) (*
 	if err != nil {
 		return nil, err
 	}
-	if manifest.ArtifactType != "" {
+	if isArtifactManifest(manifest) {
 		return nil, nil
 	}
 	if platform == nil {
