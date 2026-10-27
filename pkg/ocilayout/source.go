@@ -604,7 +604,13 @@ func (s *Source) validateReachableImage(ctx context.Context, desc *ocispec.Descr
 		}
 		if desc.Platform != nil {
 			declared := platforms.Normalize(*desc.Platform)
-			if !platformEqual(&declared, &actual) {
+			configured := actual
+			// os.version is optional in the config. A descriptor may supply it
+			// (for example Azure Linux) without contradicting an omitted value.
+			if configured.OSVersion == "" {
+				configured.OSVersion = declared.OSVersion
+			}
+			if !platformEqual(&declared, &configured) {
 				return fmt.Errorf("descriptor %s platform %+v conflicts with image config platform %+v", desc.Digest, declared, actual)
 			}
 		}
@@ -839,6 +845,11 @@ func (s *Source) Platforms(ctx context.Context) ([]ocispec.Platform, error) {
 	platform, err := s.configPlatform(ctx, &manifest.Config)
 	if err != nil {
 		return nil, err
+	}
+	// Keep a descriptor-only OS version in the discovered identity, just as
+	// index discovery does. Lookup and export must not drop this metadata.
+	if platform.OSVersion == "" && s.Descriptor.Platform != nil {
+		platform.OSVersion = s.Descriptor.Platform.OSVersion
 	}
 	return []ocispec.Platform{platform}, nil
 }

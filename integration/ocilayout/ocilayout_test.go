@@ -302,25 +302,42 @@ func TestOCILayoutRoundTrip(t *testing.T) {
 			t.Skipf("BuildKit at %s does not advertise linux(fixture.1+a+b)/amd64 (it advertises %s); "+
 				"start buildkitd with --oci-worker-platform 'linux(fixture.1+a+b)/amd64' to run this case", addr, advertised)
 		}
-		config, err := images[amd64Arch].ConfigFile()
-		require.NoError(t, err)
-		config.OSVersion = "fixture.1"
-		config.OSFeatures = []string{"b", "a"}
-		img, err := mutate.ConfigFile(images[amd64Arch], config)
-		require.NoError(t, err)
-		input := writeLayout(t, map[string]v1.Image{amd64Arch: img}, false, false)
-		before := snapshot(t, input)
-		opts := options(input, filepath.Join(t.TempDir(), "output"))
-		require.NoError(t, patch.Patch(t.Context(), opts))
-		assert.Equal(t, before, snapshot(t, input))
-		found, err := openLayout(t, opts.OCIDir).Platforms(t.Context())
-		require.NoError(t, err)
-		require.Len(t, found, 1)
-		assert.Equal(t, "fixture.1", found[0].OSVersion)
-		assert.Equal(t, []string{"a", "b"}, found[0].OSFeatures)
-		desc, err := openLayout(t, opts.OCIDir).PlatformDescriptor(t.Context(), &found[0])
-		require.NoError(t, err)
-		assert.Equal(t, found[0], *desc.Platform)
+		for _, version := range []string{"fixture.1", ""} {
+			t.Run("config OS version="+version, func(t *testing.T) {
+				config, err := images[amd64Arch].ConfigFile()
+				require.NoError(t, err)
+				config.OSVersion = version
+				config.OSFeatures = []string{"b", "a"}
+				img, err := mutate.ConfigFile(images[amd64Arch], config)
+				require.NoError(t, err)
+				input := writeLayout(t, map[string]v1.Image{amd64Arch: img}, false, false)
+				// Match images whose index descriptor supplies an optional OS version
+				// that their config omits, without changing any config or layer blob.
+				if version == "" {
+					indexPath := filepath.Join(input, ocispec.ImageIndexFile)
+					data, err := os.ReadFile(indexPath)
+					require.NoError(t, err)
+					var index ocispec.Index
+					require.NoError(t, json.Unmarshal(data, &index))
+					index.Manifests[0].Platform = &metadataPlatform
+					data, err = json.Marshal(index)
+					require.NoError(t, err)
+					require.NoError(t, os.WriteFile(indexPath, data, 0o600))
+				}
+				before := snapshot(t, input)
+				opts := options(input, filepath.Join(t.TempDir(), "output"))
+				require.NoError(t, patch.Patch(t.Context(), opts))
+				assert.Equal(t, before, snapshot(t, input))
+				found, err := openLayout(t, opts.OCIDir).Platforms(t.Context())
+				require.NoError(t, err)
+				require.Len(t, found, 1)
+				assert.Equal(t, "fixture.1", found[0].OSVersion)
+				assert.Equal(t, []string{"a", "b"}, found[0].OSFeatures)
+				desc, err := openLayout(t, opts.OCIDir).PlatformDescriptor(t.Context(), &found[0])
+				require.NoError(t, err)
+				assert.Equal(t, found[0], *desc.Platform)
+			})
+		}
 	})
 
 	t.Run("formerly colliding platform results export independently", func(t *testing.T) {
