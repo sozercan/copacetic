@@ -7,10 +7,12 @@ import (
 	stdlog "log"
 	"maps"
 	"net"
+	"net/http"
 	"net/http/httptest"
 	"os"
 	"os/exec"
 	"path/filepath"
+	"regexp"
 	"strings"
 	"testing"
 	"time"
@@ -22,7 +24,9 @@ import (
 	"github.com/google/go-containerregistry/pkg/v1/layout"
 	"github.com/google/go-containerregistry/pkg/v1/mutate"
 	"github.com/google/go-containerregistry/pkg/v1/remote"
+	"github.com/google/go-containerregistry/pkg/v1/remote/transport"
 	v1types "github.com/google/go-containerregistry/pkg/v1/types"
+	"github.com/moby/buildkit/client/llb"
 	gwclient "github.com/moby/buildkit/frontend/gateway/client"
 	"github.com/moby/buildkit/solver/pb"
 	"github.com/opencontainers/go-digest"
@@ -109,6 +113,15 @@ func TestOriginContract(t *testing.T) {
 		}
 		return Patch(ctx, opts)
 	}
+	assertNoOutput := func(t *testing.T, tag string) {
+		t.Helper()
+		for _, suffix := range []string{"", "-amd64", "-386"} {
+			_, err := remote.Get(originTestReference(t, repo+":"+tag+suffix), remote.WithContext(ctx))
+			var response *transport.Error
+			require.ErrorAs(t, err, &response, "a rejected input must not publish %s", tag+suffix)
+			require.Equal(t, http.StatusNotFound, response.StatusCode, "the registry must confirm that output is absent")
+		}
+	}
 
 	t.Run("report-directory-single-manifest", func(t *testing.T) {
 		input := repo + ":single-manifest"
@@ -175,6 +188,141 @@ func TestOriginContract(t *testing.T) {
 		require.ErrorContains(t, err, "denied by policy", "a tag the policy denies stays denied")
 		_, err = remote.Get(originTestReference(t, repo+":allowlist-denied"), remote.WithContext(ctx))
 		require.Error(t, err, "a denied input must not publish output")
+	})
+
+	t.Run("source-policy-digest-denial", func(t *testing.T) {
+		single, multi := repo+":digest-denied", repo+":digest-denied-index"
+		require.NoError(t, remote.Write(originTestReference(t, single), originals[originAMD64], remote.WithContext(ctx)))
+		require.NoError(t, remote.WriteIndex(originTestReference(t, multi), index, remote.WithContext(ctx)))
+		for _, tc := range []struct{ name, input, report, deniedDigest string }{
+			{"single-tag", single, originTestReport(t, originAMD64), children[originAMD64]},
+			{"single-tag-digest", single + "@" + children[originAMD64], originTestReport(t, originAMD64), children[originAMD64]},
+			{"single-index", multi, originTestReport(t, originAMD64), children[originAMD64]},
+			{"single-denied-index", multi, originTestReport(t, originAMD64), indexHash.String()},
+			{"multi-denied-index", multi, reports, indexHash.String()},
+			{"multi-tag", multi, reports, children[originAMD64]},
+			{"multi-late-child", multi, reports, children["386"]},
+			{"multi-immutable-index", repo + "@" + indexHash.String(), reports, children[originAMD64]},
+			{"multi-tag-index-digest", multi + "@" + indexHash.String(), reports, children[originAMD64]},
+		} {
+			for _, explicit := range []bool{false, true} {
+				for _, ignore := range []bool{false, true} {
+					t.Run(fmt.Sprintf("%s/explicit=%t/ignore=%t", tc.name, explicit, ignore), func(t *testing.T) {
+						var rules []string
+						if explicit {
+							rules = append(rules,
+								fmt.Sprintf(`{"action":"DENY","selector":{"identifier":%q,"match_type":"WILDCARD"}}`, "docker-image://"+repo+"*"),
+								fmt.Sprintf(`{"action":"ALLOW","selector":{"identifier":%q}}`, "docker-image://"+tc.input),
+							)
+						}
+						rules = append(rules, fmt.Sprintf(`{"action":"DENY","selector":{"identifier":%q,"match_type":"EXACT"}}`, "docker-image://"+repo+"@"+tc.deniedDigest))
+						policyPath := filepath.Join(t.TempDir(), "source-policy.json")
+						require.NoError(t, os.WriteFile(policyPath, []byte(`{"rules":[`+strings.Join(rules, ",")+`]}`), 0o600))
+						t.Setenv("EXPERIMENTAL_BUILDKIT_SOURCE_POLICY", policyPath)
+						tag := fmt.Sprintf("digest-denied-%s-%t-%t", tc.name, explicit, ignore)
+						err := patch(tc.input, tag, tc.report, func(opts *types.Options) { opts.IgnoreError = ignore })
+						require.ErrorContains(t, err, "denied by policy", "tag admission must not waive a captured digest denial")
+						assertNoOutput(t, tag)
+					})
+				}
+			}
+		}
+	})
+
+	t.Run("source-policy-overlapping-denials", func(t *testing.T) {
+		for _, multi := range []bool{false, true} {
+			input, report := repo+":original", originTestReport(t, originAMD64)
+			if multi {
+				input, report = repo+"@"+indexHash.String(), reports
+			}
+			for _, match := range []string{"WILDCARD", "REGEX"} {
+				t.Run(fmt.Sprintf("multi=%t/%s", multi, match), func(t *testing.T) {
+					selector := "docker-image://" + repo + "*@sha256:*"
+					if match == "REGEX" {
+						selector = "^(" + regexp.QuoteMeta("docker-image://"+input) + "|" + regexp.QuoteMeta("docker-image://"+repo+"@"+children[originAMD64]) + ")$"
+					}
+					policy := fmt.Sprintf(`{"rules":[{"action":"DENY","selector":{"identifier":%q,"match_type":%q}},{"action":"ALLOW","selector":{"identifier":%q}}]}`, selector, match, "docker-image://"+input)
+					policyPath := filepath.Join(t.TempDir(), "source-policy.json")
+					require.NoError(t, os.WriteFile(policyPath, []byte(policy), 0o600))
+					t.Setenv("EXPERIMENTAL_BUILDKIT_SOURCE_POLICY", policyPath)
+					tag := fmt.Sprintf("overlap-denied-%t-%s", multi, strings.ToLower(match))
+					err := patch(input, tag, report, func(opts *types.Options) { opts.IgnoreError = true })
+					require.ErrorContains(t, err, "denied by policy")
+					assertNoOutput(t, tag)
+				})
+			}
+		}
+	})
+
+	t.Run("source-policy-attributes-and-recovery", func(t *testing.T) {
+		for _, multi := range []bool{false, true} {
+			t.Run(fmt.Sprintf("multi=%t", multi), func(t *testing.T) {
+				input, report := repo+":attribute-allowed", originTestReport(t, originAMD64)
+				if multi {
+					input, report = repo+":attribute-allowed-index", reports
+					require.NoError(t, remote.WriteIndex(originTestReference(t, input), index, remote.WithContext(ctx)))
+				} else {
+					require.NoError(t, remote.Write(originTestReference(t, input), originals[originAMD64], remote.WithContext(ctx)))
+				}
+				policyPath := filepath.Join(t.TempDir(), "source-policy.json")
+				policy := fmt.Sprintf(`{"rules":[`+
+					`{"action":"DENY","selector":{"identifier":%q,"match_type":"WILDCARD"}},`+
+					`{"action":"CONVERT","selector":{"identifier":%q},"updates":{"attrs":{"image.resolvemode":"local"}}},`+
+					`{"action":"ALLOW","selector":{"identifier":%q}},`+
+					`{"action":"DENY","selector":{"identifier":%q,"constraints":[{"key":"image.resolvemode","value":"pull","condition":"EQUAL"}]}},`+
+					`{"action":"DENY","selector":{"identifier":"docker-image://example.com/tooling:latest",`+
+					`"constraints":[{"key":"image.resolvemode","value":"pull","condition":"EQUAL"}]}}]}`,
+					"docker-image://"+repo+"*", "docker-image://"+input, "docker-image://"+input, "docker-image://"+repo+"@"+children[originAMD64])
+				require.NoError(t, os.WriteFile(policyPath, []byte(policy), 0o600))
+				t.Setenv("EXPERIMENTAL_BUILDKIT_SOURCE_POLICY", policyPath)
+				warm := fmt.Sprintf("attribute-warm-%t", multi)
+				require.NoError(t, patch(input, warm, report, nil), "metadata and build operations must retain tag permission")
+				if !multi {
+					assertContractOrigin(t, contractImage(t, ctx, repo+":"+warm), children[originAMD64], application)
+				}
+				// A differently attributed operation for this same warm digest
+				// must still obey the conditional denial in the real worker.
+				sourcePolicy, err := readSourcePolicy()
+				require.NoError(t, err)
+				pin := repo + "@" + children[originAMD64]
+				sourcePolicy, err = authorizePinnedInput(ctx, sourcePolicy, input, pin)
+				require.NoError(t, err)
+				bk, err := bkNewClient(ctx, buildkit.Opts{Addr: addr})
+				require.NoError(t, err)
+				defer bk.Close()
+				solveOpt := authenticatedSolveOpt()
+				solveOpt.SourcePolicy = sourcePolicy
+				_, err = bk.Build(ctx, solveOpt, copaProduct, func(ctx context.Context, c gwclient.Client) (*gwclient.Result, error) {
+					definition, err := llb.Image(pin, llb.ResolveModeForcePull).Marshal(ctx)
+					if err != nil {
+						return nil, err
+					}
+					_, err = c.Solve(ctx, gwclient.SolveRequest{Definition: definition.ToPB(), Evaluate: true})
+					return gwclient.NewResult(), err
+				}, nil)
+				require.ErrorContains(t, err, "denied by policy", "inherited admission must not waive a conditional source denial")
+
+				// The same source is now warm in BuildKit. Denying its child must
+				// still fail, whether reached directly or through recorded recovery.
+				for _, repatch := range []bool{false, true} {
+					requested := input
+					if repatch {
+						requested = repo + ":" + warm
+					}
+					policy := fmt.Sprintf(`{"rules":[`+
+						`{"action":"DENY","selector":{"identifier":%q,"match_type":"WILDCARD"}},`+
+						`{"action":"ALLOW","selector":{"identifier":%q}},`+
+						`{"action":"ALLOW","selector":{"identifier":%q}},`+
+						`{"action":"DENY","selector":{"identifier":%q}}]}`,
+						"docker-image://"+repo+"*", "docker-image://"+input, "docker-image://"+requested, "docker-image://"+repo+"@"+children[originAMD64])
+					require.NoError(t, os.WriteFile(policyPath, []byte(policy), 0o600))
+					tag := fmt.Sprintf("warm-denied-%t-repatch-%t", multi, repatch)
+					err := patch(requested, tag, report, func(opts *types.Options) { opts.IgnoreError = true })
+					require.ErrorContains(t, err, "denied by policy")
+					assertNoOutput(t, tag)
+				}
+			})
+		}
 	})
 
 	t.Run("preserved-windows-versions", func(t *testing.T) {

@@ -56,7 +56,14 @@ func preflightMultiPlatformOrigins(ctx context.Context, opts *types.Options, pla
 	if err := validateSourcePolicy(solveOpt.SourcePolicy); err != nil {
 		return err
 	}
-	pinned := make([]string, 0, len(selected))
+	pinned := make([]string, 0, len(selected)+1)
+	if root != "" {
+		rootRef, err := reference.WithDigest(reference.TrimNamed(source), root)
+		if err != nil {
+			return err
+		}
+		pinned = append(pinned, rootRef.String())
+	}
 	for _, p := range selected {
 		pinned = append(pinned, inputs[buildkit.PlatformKey(p.Platform)].image)
 	}

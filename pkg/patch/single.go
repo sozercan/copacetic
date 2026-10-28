@@ -371,9 +371,17 @@ func patchSingleArchImageWithSourceAndUpdates(
 	if err != nil {
 		return nil, err
 	}
-	// The build reads the input by digest; keep a policy's decision for the
-	// requested image applicable to that pinned reference.
-	buildConfig.SolveOpt.SourcePolicy, err = authorizePinnedInput(ctx, buildConfig.SolveOpt.SourcePolicy, image, buildkitImageRef.String())
+	// Check both captured index identity and the selected platform identity.
+	// Pinning a child must not bypass a denial of its requested source index.
+	pinnedInputs := []string{buildkitImageRef.String()}
+	if capturedRoot != "" {
+		rootRef, err := reference.WithDigest(reference.TrimNamed(imageName), capturedRoot)
+		if err != nil {
+			return nil, err
+		}
+		pinnedInputs = append(pinnedInputs, rootRef.String())
+	}
+	buildConfig.SolveOpt.SourcePolicy, err = authorizePinnedInput(ctx, buildConfig.SolveOpt.SourcePolicy, image, pinnedInputs...)
 	if err != nil {
 		return nil, err
 	}

@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"maps"
+	"regexp"
 	"slices"
 	"strings"
 
@@ -105,8 +106,8 @@ func policyPatchOptions(ctx context.Context, opts *types.Options) (*types.Option
 // input to the digest-pinned references Copa reads instead. Without it, an
 // exact-tag ALLOW after a wildcard DENY stops matching once the input is pinned.
 // Each pinned reference gets an exact ALLOW rule only when the policy allows the
-// requested input unchanged and would deny that pinned reference. Tooling,
-// recovered originals and every other source keep the policy as written.
+// requested input unchanged and only shared blanket denials reject the pin.
+// Independent digest denials, conversions and other sources keep their decisions.
 func authorizePinnedInput(
 	ctx context.Context, policy *policytypes.Policy, requested string, pinned ...string,
 ) (*policytypes.Policy, error) {
@@ -121,7 +122,12 @@ func authorizePinnedInput(
 		// A denied or converted input keeps the policy's own decision.
 		return policy, err
 	}
+	var inherited *policytypes.Policy
 	var extra []*policytypes.Rule
+	usedSelectors := map[string]struct{}{}
+	for _, rule := range policy.Rules {
+		usedSelectors[rule.Selector.MatchType.String()+" "+rule.Selector.Identifier] = struct{}{}
+	}
 	seen := map[string]struct{}{}
 	for _, ref := range pinned {
 		named, err := reference.ParseNormalizedNamed(ref)
@@ -136,23 +142,117 @@ func authorizePinnedInput(
 			continue
 		}
 		seen[id] = struct{}{}
-		_, err = sourcepolicy.NewEngine([]*policytypes.Policy{policy}).Evaluate(ctx, imageSourceOp(id))
-		if err == nil {
-			continue // Already allowed, or converted by the policy itself.
+		// BuildKit evaluates image metadata without source attributes, while an
+		// LLB image source includes its resolve mode. Authorize both actual
+		// representations, without granting permission for other attributes.
+		var previous []*policytypes.AttrConstraint
+		var added bool
+		for _, op := range []*pb.SourceOp{imageSourceOp(id), {Identifier: id}} {
+			mutated, err := sourcepolicy.NewEngine([]*policytypes.Policy{policy}).Evaluate(ctx, op)
+			if err == nil {
+				continue // Already allowed, or converted by the policy itself.
+			}
+			if !errors.Is(err, sourcepolicy.ErrSourceDenied) || mutated {
+				return nil, fmt.Errorf("evaluate pinned patch input source policy: %w", err)
+			}
+			requestedOp := &pb.SourceOp{Identifier: requestedID, Attrs: maps.Clone(op.Attrs)}
+			changed, err := sourcepolicy.NewEngine([]*policytypes.Policy{policy}).Evaluate(ctx, requestedOp)
+			if err != nil {
+				return nil, fmt.Errorf("evaluate requested patch input source policy: %w", err)
+			}
+			// Filling in Copa's existing resolve mode is a no-op, even when
+			// the metadata representation omitted that attribute initially.
+			if changed && (requestedOp.Identifier != requestedID ||
+				len(changedSourceAttrs(imageSourceOp(requestedID).Attrs, requestedOp.Attrs)) != 0) {
+				return nil, fmt.Errorf("cannot inherit source policy permission from a converted patch input")
+			}
+			if inherited == nil {
+				inherited, err = pinInheritancePolicy(ctx, policy, requestedID)
+				if err != nil {
+					return nil, err
+				}
+			}
+			if _, err := sourcepolicy.NewEngine([]*policytypes.Policy{inherited}).Evaluate(ctx, op); err != nil {
+				return nil, fmt.Errorf("evaluate pinned patch input source policy: %w", err)
+			}
+			constraints := pinInheritanceConstraints(policy, op.Attrs)
+			if added && slices.EqualFunc(previous, constraints, func(a, b *policytypes.AttrConstraint) bool {
+				return a.Key == b.Key && a.Value == b.Value && a.Condition == b.Condition
+			}) {
+				continue
+			}
+			extra = append(extra, &policytypes.Rule{
+				Action:   policytypes.PolicyAction_ALLOW,
+				Selector: pinInheritanceSelector(id, constraints, usedSelectors),
+			})
+			previous, added = constraints, true
 		}
-		if !errors.Is(err, sourcepolicy.ErrSourceDenied) {
-			return nil, fmt.Errorf("evaluate pinned patch input source policy: %w", err)
-		}
-		extra = append(extra, &policytypes.Rule{
-			Action:   policytypes.PolicyAction_ALLOW,
-			Selector: &policytypes.Selector{Identifier: id, MatchType: policytypes.MatchType_EXACT},
-		})
 	}
 	if len(extra) == 0 {
 		return policy, nil
 	}
 	// The last matching ALLOW or DENY wins, so these exact rules go last.
 	return &policytypes.Policy{Version: policy.Version, Rules: append(slices.Clone(policy.Rules), extra...)}, nil
+}
+
+// pinInheritancePolicy removes only unconditional prefix-wildcard denials that
+// also match the requested source. A digest-aware wildcard, regex or conditional
+// denial must not be mistaken for a blanket deny just because it matches both
+// the requested locator and the captured digest. Unknown patterns fail closed.
+func pinInheritancePolicy(ctx context.Context, policy *policytypes.Policy, requestedID string) (*policytypes.Policy, error) {
+	filtered := &policytypes.Policy{Version: policy.Version}
+	for _, rule := range policy.Rules {
+		prefix, wildcard := strings.CutSuffix(rule.Selector.Identifier, "*")
+		if rule.Action == policytypes.PolicyAction_DENY &&
+			rule.Selector.MatchType == policytypes.MatchType_WILDCARD && wildcard &&
+			!strings.ContainsAny(prefix, "*@") && len(rule.Selector.Constraints) == 0 {
+			allows, err := policyAllowsUnchanged(ctx, &policytypes.Policy{Rules: []*policytypes.Rule{rule}}, requestedID)
+			if err != nil {
+				return nil, err
+			}
+			if !allows {
+				continue
+			}
+		}
+		filtered.Rules = append(filtered.Rules, rule)
+	}
+	return filtered, nil
+}
+
+// Scope the inherited decision to the attributes evaluated above. An exact
+// identifier alone must not override a conditional denial for another source op.
+func pinInheritanceConstraints(policy *policytypes.Policy, attrs map[string]string) []*policytypes.AttrConstraint {
+	keys := map[string]struct{}{}
+	for _, rule := range policy.Rules {
+		for _, constraint := range rule.Selector.Constraints {
+			keys[constraint.Key] = struct{}{}
+		}
+	}
+	var constraints []*policytypes.AttrConstraint
+	for _, key := range slices.Sorted(maps.Keys(keys)) {
+		constraints = append(constraints, &policytypes.AttrConstraint{Key: key, Value: attrs[key], Condition: policytypes.AttrMatch_EQUAL})
+	}
+	return constraints
+}
+
+// Older BuildKit releases cache selector constraints by match type and identifier.
+// Keep inherited selectors distinct from user rules and each other. Anchored
+// regex alternatives still match exactly the same captured image identity.
+func pinInheritanceSelector(id string, constraints []*policytypes.AttrConstraint, used map[string]struct{}) *policytypes.Selector {
+	selector := &policytypes.Selector{Identifier: id, MatchType: policytypes.MatchType_EXACT, Constraints: constraints}
+	for {
+		key := selector.MatchType.String() + " " + selector.Identifier
+		if _, exists := used[key]; !exists {
+			used[key] = struct{}{}
+			return selector
+		}
+		if selector.MatchType == policytypes.MatchType_EXACT {
+			selector.MatchType = policytypes.MatchType_REGEX
+			selector.Identifier = "^" + regexp.QuoteMeta(id) + "$"
+		} else {
+			selector.Identifier += "$"
+		}
+	}
 }
 
 const imageSourceScheme = "docker-image://"

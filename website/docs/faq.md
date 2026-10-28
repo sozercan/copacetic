@@ -167,6 +167,8 @@ export EXPERIMENTAL_BUILDKIT_SOURCE_POLICY=source-policy.json
 
 Input-image `CONVERT` rules are applied before Copa captures the source digest. The policy-selected image is used for patching and recorded as the recovery locator and patch origin; the requested output repository and tag are unchanged. This also keeps exact tag selectors effective after Copa pins the input by digest. A policy that sets attributes on the patch input, such as `image.resolvemode`, is rejected with an error.
 
+An exact-tag permission can carry over to the captured digest when only unconditional prefix-wildcard denials (such as `docker-image://example.com/team/*`) would reject it. Digest-specific, regular-expression and conditional denials are not waived. Both the captured index digest and the selected platform digests are checked. If an allowlist uses those forms, explicitly allow the pinned input digest. Rules for other sources, including tooling and recovered originals, remain unchanged.
+
 For more information on source policies, see [Buildkit Source Policies](https://docs.docker.com/build/building/env-vars/#experimental_buildkit_source_policy).
 
 ## Why do package updates fail with expired GPG keys?
