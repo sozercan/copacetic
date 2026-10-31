@@ -190,6 +190,33 @@ type safetyInput struct {
 	TestOutput   string
 	// ExcludeDocs is set when the image was installed without documentation.
 	ExcludeDocs bool
+	// ResolveError holds the package manager's explanation when the updates
+	// could not be resolved against the packages installed in the image.
+	ResolveError string
+}
+
+// resolverProblems extracts the lines explaining why tdnf could not resolve
+// the update from its output, falling back to the last lines of the log.
+func resolverProblems(log string) string {
+	lines := strings.Split(strings.TrimSpace(log), "\n")
+	var out []string
+	for _, l := range lines {
+		l = strings.TrimSpace(l)
+		lower := strings.ToLower(l)
+		if strings.Contains(lower, "requires") || strings.Contains(lower, "conflicts") ||
+			strings.Contains(lower, "nothing provides") || strings.Contains(lower, "problem") ||
+			strings.HasPrefix(lower, "error") {
+			out = append(out, l)
+		}
+	}
+	if len(out) == 0 {
+		out = lines
+	}
+	const maxLines = 10
+	if len(out) > maxLines {
+		out = out[len(out)-maxLines:]
+	}
+	return strings.Join(out, "\n")
 }
 
 // docsExcluded reports whether the image was installed without documentation
@@ -231,6 +258,12 @@ func (e *SafetyError) Error() string {
 // passes rpm's dependency check against the image's own package database, and
 // that no scriptlet that could run does more than refresh the linker cache.
 func checkSafety(in *safetyInput) error {
+	if in.ResolveError != "" {
+		return &SafetyError{Reasons: []string{
+			"the package manager cannot resolve the update against the packages installed in the image:\n" + in.ResolveError,
+		}}
+	}
+
 	var reasons []string
 
 	installed := make(map[string][]rpmPackage)

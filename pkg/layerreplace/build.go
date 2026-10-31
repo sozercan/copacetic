@@ -35,6 +35,7 @@ const (
 	testOutputFile = "test.txt"
 	testExitFile   = "test.rc"
 	downloadLog    = "download.log"
+	downloadExit   = "download.rc"
 	fileFlagsFile  = "fileflags.tsv"
 
 	packagesFile = "packages.tsv"
@@ -74,12 +75,16 @@ if [ "$#" -eq 0 ] || [ -n "$want" ]; then
 	# The image has no repository configuration of its own; use the tooling
 	# image's repositories.
 	# shellcheck disable=SC2086
+	# A resolver failure (for example a package in the image pinning the old
+	# version) is reported as a safety check failure, not a build error.
 	if ! tdnf upgrade -y --downloadonly --downloaddir="$out/rpms" --installroot="$root" \
 		--releasever="$RELEASEVER" --setopt=reposdir=/etc/yum.repos.d $want > "$out/` + downloadLog + `" 2>&1; then
 		cat "$out/` + downloadLog + `" >&2
-		exit 1
+		echo 1 > "$out/` + downloadExit + `"
+		exit 0
 	fi
 fi
+echo 0 > "$out/` + downloadExit + `"
 
 : > "$out/` + downloadedFile + `"
 : > "$out/` + scriptsFile + `"
@@ -283,6 +288,16 @@ func readSafetyInput(ctx context.Context, ref gwclient.Reference) (*safetyInput,
 	}
 	if in.Installed, err = parsePackages(bytes.NewReader(dt), false); err != nil {
 		return nil, err
+	}
+	if dt, err = read(downloadExit); err != nil {
+		return nil, err
+	}
+	if strings.TrimSpace(string(dt)) != "0" {
+		if dt, err = read(downloadLog); err != nil {
+			return nil, err
+		}
+		in.ResolveError = resolverProblems(string(dt))
+		return in, nil
 	}
 	if dt, err = read(downloadedFile); err != nil {
 		return nil, err

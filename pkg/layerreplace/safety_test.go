@@ -210,3 +210,28 @@ func TestDocsExcluded(t *testing.T) {
 	require.NoError(t, err)
 	assert.False(t, excluded, "only documentation files count")
 }
+
+func TestCheckSafetyResolveError(t *testing.T) {
+	log := `Refreshing metadata for: 'Azure Linux Official Base 3.0 x86_64'
+1. package layers-demo-0.1.0-1.azl3.x86_64 requires openssl-libs = 3.3.5-5.azl3, but none of the providers can be installed
+Error(1301) : Solv general runtime error
+`
+	in := &safetyInput{ResolveError: resolverProblems(log)}
+	err := checkSafety(in)
+	if err == nil {
+		t.Fatal("expected a safety error")
+	}
+	msg := err.Error()
+	for _, want := range []string{"cannot resolve the update", "requires openssl-libs = 3.3.5-5.azl3", "Error(1301)"} {
+		if !strings.Contains(msg, want) {
+			t.Errorf("error %q does not contain %q", msg, want)
+		}
+	}
+	if strings.Contains(msg, "Refreshing metadata") {
+		t.Errorf("error should only keep the resolver problems: %q", msg)
+	}
+
+	if got := resolverProblems("one\ntwo"); got != "one\ntwo" {
+		t.Errorf("fallback to the log lines, got %q", got)
+	}
+}
