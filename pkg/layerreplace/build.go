@@ -219,6 +219,10 @@ func runBuild(ctx context.Context, bkClient *client.Client, p *buildParams, prog
 			return nil, err
 		}
 		res.Downloaded = in.Downloaded
+		if in.ResolveError != "" {
+			decision = checkSafety(in)
+			return nil, decision
+		}
 		if len(in.Downloaded) == 0 {
 			decision = types.ErrNoUpdatesFound
 			return nil, decision
