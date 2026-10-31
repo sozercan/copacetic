@@ -15,6 +15,7 @@ import (
 	"github.com/hashicorp/go-multierror"
 	rpmVer "github.com/knqyf263/go-rpm-version"
 	"github.com/moby/buildkit/client/llb"
+	gwclient "github.com/moby/buildkit/frontend/gateway/client"
 	ocispecs "github.com/opencontainers/image-spec/specs-go/v1"
 	"github.com/project-copacetic/copacetic/pkg/buildkit"
 	"github.com/project-copacetic/copacetic/pkg/types"
@@ -1294,4 +1295,39 @@ func validateRPMPackageVersions(updates unversioned.UpdatePackages, cmp VersionC
 	}
 
 	return errorPkgs, allErrors.ErrorOrNil()
+}
+
+// RPMResultQueryFormat is the `rpm -q --queryformat` used to produce the
+// results read by ValidateRPMPackageVersions.
+const RPMResultQueryFormat = resultQueryFormat
+
+// ValidateRPMPackageVersions checks that the output of
+// `rpm -qa --queryformat RPMResultQueryFormat <packages>` shows every update
+// installed at its fixed version or newer. It returns the packages that failed
+// validation.
+func ValidateRPMPackageVersions(updates unversioned.UpdatePackages, resultsBytes []byte, ignoreErrors bool) ([]string, error) {
+	return validateRPMPackageVersions(updates, RPMVersionComparer(), resultsBytes, ignoreErrors)
+}
+
+// RPMVersionComparer returns the version comparer used for RPM packages.
+func RPMVersionComparer() VersionComparer {
+	return VersionComparer{isValidRPMVersion, isLessThanRPMVersion}
+}
+
+// ResolveRPMToolingImage returns the tooling image Copa uses for RPM images of
+// the given OS, preferring Copa's cached copy and falling back to the
+// upstream image.
+func ResolveRPMToolingImage(ctx context.Context, c gwclient.Client, osType, osVersion string, platform *ocispecs.Platform) (llb.State, string, error) {
+	name := getRPMImageName(nil, osType, osVersion, true)
+	st, err := tryImage(ctx, name, c, platform)
+	if err == nil {
+		return st, name, nil
+	}
+	log.Debugf("Cached tooling image %s is unavailable, using upstream: %v", name, err)
+	name = getRPMImageName(nil, osType, osVersion, false)
+	st, err = tryImage(ctx, name, c, platform)
+	if err != nil {
+		return llb.State{}, "", err
+	}
+	return st, name, nil
 }

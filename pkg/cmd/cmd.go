@@ -58,6 +58,7 @@ type patchArgs struct {
 	chartName           string
 	chartVersion        string
 	chartRepo           string
+	layerMode           string
 }
 
 func NewPatchCmd() *cobra.Command {
@@ -125,6 +126,11 @@ copa patch --chart reloader --chart-version 1.2.1 --chart-repo oci://ghcr.io/sta
 				ChartName:           ua.chartName,
 				ChartVersion:        ua.chartVersion,
 				ChartRepo:           ua.chartRepo,
+				LayerMode:           ua.layerMode,
+			}
+
+			if err := validateLayerMode(ua.layerMode); err != nil {
+				return err
 			}
 
 			hasChart := ua.chartName != ""
@@ -147,6 +153,10 @@ copa patch --chart reloader --chart-version 1.2.1 --chart-repo oci://ghcr.io/sta
 			}
 			if modeCount > 1 {
 				return errors.New("--image, --config, and --chart are mutually exclusive")
+			}
+
+			if ua.layerMode == types.LayerModeReplace && !hasImage {
+				return errors.New("--layers=replace can only be used with --image")
 			}
 
 			if hasConfig {
@@ -228,15 +238,30 @@ copa patch --chart reloader --chart-version 1.2.1 --chart-repo oci://ghcr.io/sta
 				"Values: 'patch' (e.g., 1.23.0 -> 1.23.latest), 'minor' (e.g., 1.23 -> 1.25), 'major'. "+
 				"Currently supported for Go only. Requires 'library' in --pkg-types")
 		flags.Lookup("toolchain-patch-level").NoOptDefVal = utils.PatchTypePatch
+		flags.StringVar(&ua.layerMode, "layers", types.LayerModeAppend,
+			"[EXPERIMENTAL] How patched packages are layered: 'append' adds a patch layer on top of the image; "+
+				"'replace' replaces the per-package layers of images built by Dalec with image.layers=per-package, "+
+				"reusing every other layer, and pushes the result (requires --push; RPM/Azure Linux 3, single platform)")
 		flags.StringVar(&ua.goVCSURL, "go-vcs-url", "",
 			"[EXPERIMENTAL] Override Go source repository and ref for binary rebuilds. Format: 'https://github.com/org/repo@ref'")
 	} else {
 		// Set default values when experimental flags are not enabled
 		ua.pkgTypes = utils.PkgTypeOS
 		ua.libraryPatchLevel = utils.PatchTypePatch
+		ua.layerMode = types.LayerModeAppend
 	}
 
 	return patchCmd
+}
+
+// validateLayerMode validates the --layers flag.
+func validateLayerMode(mode string) error {
+	switch mode {
+	case "", types.LayerModeAppend, types.LayerModeReplace:
+		return nil
+	default:
+		return fmt.Errorf("invalid --layers value %q: must be %q or %q", mode, types.LayerModeAppend, types.LayerModeReplace)
+	}
 }
 
 // validateLibraryPatchLevel validates the library patch level flag and its usage.

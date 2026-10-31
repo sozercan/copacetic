@@ -16,6 +16,7 @@ import (
 
 	"github.com/project-copacetic/copacetic/pkg/buildkit"
 	"github.com/project-copacetic/copacetic/pkg/common"
+	"github.com/project-copacetic/copacetic/pkg/layerreplace"
 	"github.com/project-copacetic/copacetic/pkg/report"
 	"github.com/project-copacetic/copacetic/pkg/tui"
 	"github.com/project-copacetic/copacetic/pkg/types"
@@ -88,6 +89,10 @@ func Patch(ctx context.Context, opts *types.Options) error {
 
 // patchWithContext orchestrates the main patching workflow.
 func patchWithContext(ctx context.Context, opts *types.Options) error {
+	if opts.LayerMode == types.LayerModeReplace {
+		return layerreplace.Run(ctx, opts)
+	}
+
 	// Configure EOL API if provided
 	if opts.EOLAPIBaseURL != "" {
 		utils.SetEOLAPIBaseURL(opts.EOLAPIBaseURL)

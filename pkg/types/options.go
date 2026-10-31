@@ -60,9 +60,21 @@ type Options struct {
 	EOLAPIBaseURL string
 	ExitOnEOL     bool
 
+	// LayerMode selects how patched content is layered: LayerModeAppend
+	// (default) or LayerModeReplace.
+	LayerMode string
+
 	// Chart patching
 	ChartName     string
 	ChartVersion  string
 	ChartRepo     string
 	ChartRegistry string
 }
+
+const (
+	// LayerModeAppend adds the patched content as a new layer on top of the image.
+	LayerModeAppend = "append"
+	// LayerModeReplace replaces the per-package layers of images built by
+	// Dalec with `image.layers: per-package`. Experimental.
+	LayerModeReplace = "replace"
+)

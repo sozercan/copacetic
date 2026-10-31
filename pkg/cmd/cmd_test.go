@@ -127,3 +127,33 @@ func TestChartModeValidatesRequiredFlags(t *testing.T) {
 		})
 	}
 }
+
+func TestLayersFlagRequiresExperimentalMode(t *testing.T) {
+	t.Setenv("COPA_EXPERIMENTAL", "")
+	cmd := NewPatchCmd()
+	cmd.SetArgs([]string{"--image", "alpine", "--layers", "replace"})
+	assert.ErrorContains(t, cmd.Execute(), "unknown flag: --layers")
+}
+
+func TestLayersFlagValidation(t *testing.T) {
+	t.Setenv("COPA_EXPERIMENTAL", "1")
+	tests := []struct {
+		name string
+		args []string
+		want string
+	}{
+		{name: "invalid value", args: []string{"--image", "alpine", "--layers", "squash"}, want: `invalid --layers value "squash"`},
+		{name: "bulk mode", args: []string{"--config", "config.yaml", "--layers", "replace"}, want: "--layers=replace can only be used with --image"},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			cmd := NewPatchCmd()
+			cmd.SetArgs(tt.args)
+			assert.ErrorContains(t, cmd.Execute(), tt.want)
+		})
+	}
+
+	flag := NewPatchCmd().Flags().Lookup("layers")
+	require.NotNil(t, flag)
+	assert.Equal(t, "append", flag.DefValue)
+}
